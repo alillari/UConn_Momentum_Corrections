@@ -13,6 +13,7 @@
 #include <TSystem.h>
 #include "Math/Vector4D.h"
 #include "Math/LorentzVector.h"
+#include "Math/PxPyPzMVector.h"
 
 #include <iostream>
 #include <vector>
@@ -118,10 +119,27 @@ int main(int argc, char* argv[]){
     int El_detector = 2;
     int Pip_detector = 3;
 
-    MomCorrParticle Electron("El", El_mass, "e_px", "e_py", "e_pz", "esec", six_sector, El_detector, El_mom_low, El_mom_high, mom_bin, El_phi_flag, );
-    MomCorrParticle Pip("Pip", Pip_mass, "pip_px", "pip_py", "pip_pz", "pipsec", six_sector, Pip_detector, Pip_mom_low, Pip_mom_high, mom_bin, Pip_phi_flag);
+    //Define your phi shift. I pulled this from Richard's code. Good luck.
+    double El_compute_local_phi(double ElPhi, int esec, double El) {
+    	double localPhi = ElPhi - (esec - 1) * 60;
+    	return localPhi - (30 / El);
+    }
 
-    std::vector<MomCorrParticle> particle_list = {electron, pip};
+    //Determine what your phi bins are
+    double El_phi_divider = 5;
+    int El_phi_binning(double localPhi) {
+	if(localPhi <= -El_phi_divider){ return 1; }
+	else if(-El_phi_divider < localPhi <= El_phi_divider){ return 2; }
+	else { return 3; }
+    }
 
-    
+    std::unordered_map<int, std::string> El_phi_bin_map = {{1, "negative"}, {2, "neutral"}, {3,"positive"}};
+
+
+    MomCorrParticle Electron("El", El_mass, "e_px", "e_py", "e_pz", "esec", six_sector, El_detector, El_mom_low, El_mom_high, mom_bin, El_phi_flag, El_compute_local_phi, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
+    //MomCorrParticle Pip("Pip", Pip_mass, "pip_px", "pip_py", "pip_pz", "pipsec", six_sector, Pip_detector, Pip_mom_low, Pip_mom_high, mom_bin, Pip_phi_flag);
+
+    //std::vector<MomCorrParticle> particle_list = {electron, pip};
+
+    return 0;
 }
