@@ -14,15 +14,15 @@ MomCorrParticle::MomCorrParticle(const std::string& name,
                                  const std::string& pyBranch, 
                                  const std::string& pzBranch, 
                                  const std::string& sectorBranch, 
-                                 const std::vector<int>& sectors,
-				 const int detector, 
+                                 const int detector,
+				 const std::vector<int>& sectors,
                                  double pMin, double pMax, double binWidth,
 				 bool usePhiBinning,
 				 std::function<double(double, double, int)> phiShiftFunc,
 				 std::function<int(double)> phiBinningFunc,
 				 std::unordered_map<int, std::string> phiBinningLabels)
     : name_(name), mass_(mass), pxBranch_(pxBranch), pyBranch_(pyBranch), pzBranch_(pzBranch), 
-      sectorBranch_(sectorBranch), sectors_(sectors), detector_(detector), pMin_(pMin), pMax_(pMax), binWidth_(binWidth), 
+      sectorBranch_(sectorBranch), detector_(detector), sectors_(sectors), pMin_(pMin), pMax_(pMax), binWidth_(binWidth), 
       usePhiBinning_(usePhiBinning), phiShiftFunc_(phiShiftFunc), phiBinningFunc_(phiBinningFunc), phiBinningLabels_(phiBinningLabels) {}
 
 // Getters

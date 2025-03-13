@@ -54,7 +54,7 @@ private:
     double pMin_, pMax_, binWidth_;
     bool usePhiBinning_;
     std::function<double(double, double, int)> phiShiftFunc_;
-    std::function<int(double)> phiBinningFunction_;
+    std::function<int(double)> phiBinningFunc_;
     std::unordered_map<int, std::string> phiBinningLabels_;
 };
 
