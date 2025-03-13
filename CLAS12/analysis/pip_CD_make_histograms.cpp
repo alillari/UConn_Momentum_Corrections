@@ -12,6 +12,7 @@
 #include <TGraphErrors.h>
 #include <TSystem.h>
 #include "Math/Vector4D.h"
+#include "Math/LorentzVector.h"
 
 #include <iostream>
 #include <vector>
@@ -82,16 +83,21 @@ int main(int argc, char* argv[]){
     
     ROOT::RDataFrame df(inputChain);
 
-    //Beam and particle information, adjust for your data
+    //Beam and particle information, adjust for your data and particles
     //Current beam energy is for RGA Sp19
     const double beam_energy = 10.1998;
     const double proton_mass = 0.938;
-    const double el_mass = 0.000511;
-    const double pip_mass = 0.140;
+    const double El_mass = 0.000511;
+    const double Pro_mass = 0.938272088;
+    const double Pip_mass = 0.140;
+
+    //Making TLorentzVectors from beam and target information. Don't touch.
+    ROOT::Math::PxPyPzMVector<double> beam_vector(0,0,sqrt(pow(beam_energy,2) - pow(El_mass,2)),El_mass);
+    ROOT::Math::PxPyPzMVector<double> target_vector(0,0,0,Pro_mass);
 
     //Make your the particles in your dataset here!
     //Particles are made with the constructor as seen below
-    //It goes 
+    //It goes:
     //	name, mass (GeV), branch names for momentums, branch name for sector, vector for sectors, detector (2 for FD, 3 for CD), min mommentum (GeV), max mommentum (GeV), mommentum bin width (GeV)
     //NOTE: Be generous with range and number of bins. You can always decrease the range and increase bin size in the fitting code
     //	    But you can't increase the number of bins after
@@ -99,22 +105,23 @@ int main(int argc, char* argv[]){
 
     double mom_bin = .05;
 
-    double el_mom_low = 2;
-    double el_mom_high = 9;
-    bool el_phi_flag = true;
+    double El_mom_low = 2;
+    double El_mom_high = 9;
+    bool El_phi_flag = true;
 
-    double pip_mom_low = 0;
-    double pip_mom_high = 10;
-    bool pip_phi_flag = false;
+
+    double Pip_mom_low = 0;
+    double Pip_mom_high = 10;
+    bool Pip_phi_flag = false;
 
     std::vector<int> six_sector = {1,2,3,4,5,6};
-    int el_detector = 2;
-    int pip_detector = 3;
+    int El_detector = 2;
+    int Pip_detector = 3;
 
-    MomCorrParticle electron("el", el_mass, "e_px", "e_py", "e_pz", "esec", six_sector, el_detector, el_mom_low, el_mom_high, mom_bin, el_phi_flag, );
-    MomCorrParticle pip("pip", pip_mass, "pip_px", "pip_py", "pip_pz", "pipsec", six_sector, pip_detector, pip_mom_low, pip_mom_high, mom_bin);
+    MomCorrParticle Electron("El", El_mass, "e_px", "e_py", "e_pz", "esec", six_sector, El_detector, El_mom_low, El_mom_high, mom_bin, El_phi_flag, );
+    MomCorrParticle Pip("Pip", Pip_mass, "pip_px", "pip_py", "pip_pz", "pipsec", six_sector, Pip_detector, Pip_mom_low, Pip_mom_high, mom_bin, Pip_phi_flag);
 
-    std::vector<MomCorrParticle> particleList = {electron, pip};
+    std::vector<MomCorrParticle> particle_list = {electron, pip};
 
     
 }

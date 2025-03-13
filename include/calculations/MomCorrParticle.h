@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <unordered_map>
+
 #include <ROOT/RDataFrame.hxx>
 
 class MomCorrParticle {
@@ -19,8 +21,9 @@ public:
                     const std::vector<int>& sectors, 
                     double pMin, double pMax, double binWidth,
 		    bool usePhiBinning,
-		    std::function<double(double, double, int)> phiShiftFunc = [](double phi, double p, int sector) { return phi; },
-		    std::function<int(double)> phiBinningFunction = [](double phi) { return 0; }
+		    std::function<double(double, double, int)> phiShiftFunc,
+		    std::function<int(double)> phiBinningFunction,
+		    std::unordered_map<int, std::string> phiBinningLabels
 		    );
 
     // Getters
@@ -38,6 +41,7 @@ public:
     bool IsPhiBinningEnabled() const;
     std::function<double(double, double, int)> GetPhiShiftFunction() const;
     std::function<int(double)> GetPhiBinningFunction() const;
+    std::unordered_map<int, std::string> GetPhiBinningLabels() const;
 
     ROOT::RDF::RNode AddBranches(ROOT::RDF::RNode df) const;
 
@@ -51,6 +55,7 @@ private:
     bool usePhiBinning_;
     std::function<double(double, double, int)> phiShiftFunc_;
     std::function<int(double)> phiBinningFunction_;
+    std::unordered_map<int, std::string> phiBinningLabels_;
 };
 
 #endif // MOMCORRPARTICLE_H
