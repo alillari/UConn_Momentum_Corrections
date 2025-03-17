@@ -19,8 +19,15 @@
 
 #include <MomCorrParticle.h>
 
-
-namespace fs = std::filesystem;
+std::vector<std::string> ExtractMomentumBranches(const std::vector<MomCorrParticle>& particles) {
+    std::vector<std::string> branches;
+    for (const auto& particle : particles) {
+        branches.push_back(particle.GetPxBranch());
+        branches.push_back(particle.GetPyBranch());
+        branches.push_back(particle.GetPzBranch());
+    }
+    return branches;
+}
 
 int main(int argc, char* argv[]){
     ROOT::EnableImplicitMT();
@@ -85,10 +92,6 @@ int main(int argc, char* argv[]){
     const double Pro_mass = 0.938272088;
     const double Pip_mass = 0.140;
 
-    //Making TLorentzVectors from beam and target information. Don't touch.
-    ROOT::Math::PxPyPzMVector beam_vector(0,0,sqrt(pow(beam_energy,2) - pow(El_mass,2)),El_mass);
-    ROOT::Math::PxPyPzMVector target_vector(0,0,0,Pro_mass);
-
     //Make your the particles in your dataset here!
     //Particles are made with the constructor as seen below
     //It goes:
@@ -96,6 +99,9 @@ int main(int argc, char* argv[]){
     //NOTE: Be generous with range and number of bins. You can always decrease the range and increase bin size in the fitting code
     //	    But you can't increase the number of bins after
     
+    double missing_mass_low = .8;
+    double missing_mass_high = 1.2;
+    int missing_mass_width = .05;
 
     double mom_bin = .05;
 
@@ -131,9 +137,59 @@ int main(int argc, char* argv[]){
 
 
     MomCorrParticle Electron("El", El_mass, "e_px", "e_py", "e_pz", "esec", El_detector, six_sector, El_mom_low, El_mom_high, mom_bin, El_phi_flag, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
-    //MomCorrParticle Pip("Pip", Pip_mass, "pip_px", "pip_py", "pip_pz", "pipsec", six_sector, Pip_detector, Pip_mom_low, Pip_mom_high, mom_bin, Pip_phi_flag);
+    MomCorrParticle Pip("Pip", Pip_mass, "pip_px", "pip_py", "pip_pz", "pipsec", Pip_detector, six_sector, Pip_mom_low, Pip_mom_high, mom_bin, Pip_phi_flag, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
 
-    //std::vector<MomCorrParticle> particle_list = {electron, pip};
+    std::vector<MomCorrParticle> particle_list = {electron, pip};
+
+    //Logic for calculating Missing Mass
+    auto compute_missing_mass = [&](const std::vector<std::tuple<double, double, double, double>>& particles) {
+    	ROOT::Math::PxPyPzMVector beam_vector(0, 0, sqrt(pow(beam_energy, 2) - pow(El_mass, 2)), El_mass);
+    	ROOT::Math::PxPyPzMVector target_vector(0, 0, 0, Pro_mass);
+
+    	// Sum of all detected particle four-vectors
+    	ROOT::Math::PxPyPzMVector detected_sum(0, 0, 0, 0);
+
+    	for (const auto& [px, py, pz, mass] : particles) {
+        	detected_sum += ROOT::Math::PxPyPzMVector(px, py, pz, mass);
+    	}
+
+    	// Compute missing four-vector
+    	auto missing_vector = (beam_vector + target_vector) - detected_sum;
+
+    	// Return missing mass
+    	return missing_vector.M();
+    };
+
+
+
+    std::vector<std::string> momentum_columns;
+    //Main logic loop for creating histograms
+    for(auto& particle: particle_list){
+    	df = particle.AddBranches(df);
+    }
+
+    df = df.Define("missing_mass", 
+    [=](const ROOT::RVec<double>& px, const ROOT::RVec<double>& py, const ROOT::RVec<double>& pz) {
+        	std::vector<std::tuple<double, double, double, double>> particle_momenta;
+        
+        	for (size_t i = 0; i < px.size(); ++i) {
+            		double mass = particles[i].GetMass();
+            		particle_momenta.emplace_back(px[i], py[i], pz[i], mass);
+        	}
+        
+        	return compute_missing_mass(particle_momenta);
+    	},
+    	ExtractMomentumBranches(particles)  // Dynamically extract the necessary columns
+    );
+
+    //for(auto& particle: particle_list){
+    //	std::string mom_branch = particle.GetMomentumBranch(); // Assume you have this function
+
+    //	auto h = df.Histo2D(
+    //    	{("hMM_vs_" + particle.GetName()).c_str(),
+    //     	("MM vs " + particle.GetName() + " Momentum; Momentum (GeV); MM (GeV/c^2)").c_str(),50, 0, 10, 50, 0, 3},mom_branch, "missing_mass");
+    //}
+
 
     return 0;
 }
