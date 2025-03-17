@@ -82,7 +82,8 @@ int main(int argc, char* argv[]){
 
     //RDataFrame and particle lines below
     
-    ROOT::RDataFrame df(chain);
+    ROOT::RDataFrame df_base(chain);
+    ROOT::RDF::RNode df = df_base;
 
     //Beam and particle information, adjust for your data and particles
     //Current beam energy is for RGA Sp19
@@ -139,7 +140,7 @@ int main(int argc, char* argv[]){
     MomCorrParticle Electron("El", El_mass, "e_px", "e_py", "e_pz", "esec", El_detector, six_sector, El_mom_low, El_mom_high, mom_bin, El_phi_flag, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
     MomCorrParticle Pip("Pip", Pip_mass, "pip_px", "pip_py", "pip_pz", "pipsec", Pip_detector, six_sector, Pip_mom_low, Pip_mom_high, mom_bin, Pip_phi_flag, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
 
-    std::vector<MomCorrParticle> particle_list = {electron, pip};
+    std::vector<MomCorrParticle> particle_list = {Electron, Pip};
 
     //Logic for calculating Missing Mass
     auto compute_missing_mass = [&](const std::vector<std::tuple<double, double, double, double>>& particles) {
@@ -173,13 +174,13 @@ int main(int argc, char* argv[]){
         	std::vector<std::tuple<double, double, double, double>> particle_momenta;
         
         	for (size_t i = 0; i < px.size(); ++i) {
-            		double mass = particles[i].GetMass();
+            		double mass = particle_list[i].GetMass();
             		particle_momenta.emplace_back(px[i], py[i], pz[i], mass);
         	}
         
         	return compute_missing_mass(particle_momenta);
     	},
-    	ExtractMomentumBranches(particles)  // Dynamically extract the necessary columns
+    	ExtractMomentumBranches(particle_list)  // Dynamically extract the necessary columns
     );
 
     //for(auto& particle: particle_list){
