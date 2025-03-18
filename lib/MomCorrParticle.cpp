@@ -36,7 +36,7 @@ const std::vector<int>& MomCorrParticle::GetSectors() const { return sectors_; }
 int MomCorrParticle::GetDetector() const { return detector_; }
 double MomCorrParticle::GetMomentumMin() const { return pMin_; }
 double MomCorrParticle::GetMomentumMax() const { return pMax_; }
-double MomCorrParticle::GetBinWidth() const { return binWidth_; }
+double MomCorrParticle::GetMomentumBinWidth() const { return binWidth_; }
 int MomCorrParticle::GetBins() const { return static_cast<int>(std::round((pMax_ - pMin_) / binWidth_)); }
 bool MomCorrParticle::IsPhiBinningEnabled() const { return usePhiBinning_; }
 std::function<double(double, double, int)> MomCorrParticle::GetPhiShiftFunction() const { return phiShiftFunc_; }

@@ -37,7 +37,7 @@ public:
     const std::vector<int>& GetSectors() const;
     double GetMomentumMin() const;
     double GetMomentumMax() const;
-    double GetBinWidth() const;
+    double GetMomentumBinWidth() const;
     int GetBins() const;
     bool IsPhiBinningEnabled() const;
     std::function<double(double, double, int)> GetPhiShiftFunction() const;

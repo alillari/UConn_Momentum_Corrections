@@ -96,21 +96,19 @@ int main(int argc, char* argv[]){
     //Make your the particles in your dataset here!
     //Particles are made with the constructor as seen below
     //It goes:
-    //	name, mass (GeV), branch names for momentums, branch name for sector, vector for sectors, detector (2 for FD, 3 for CD), min mommentum (GeV), max mommentum (GeV), mommentum bin width (GeV)
+    //	name, mass (GeV), branch names for momentums, branch name for sector, vector for sectors, detector (2 for FD, 3 for CD), min mommentum (GeV), max mommentum (GeV), mommentum bin width (GeV), more
     //NOTE: Be generous with range and number of bins. You can always decrease the range and increase bin size in the fitting code
     //	    But you can't increase the number of bins after
     
     double missing_mass_low = .8;
     double missing_mass_high = 1.2;
     int missing_mass_width = .05;
-    int missing_mass_bins = static_cast<int>(std::round((missing_mass_high - missing_mass_low) / missing_mass_bin_width)); 
 
     double mom_bin = .05;
 
     double El_mom_low = 2;
     double El_mom_high = 9;
     bool El_phi_flag = true;
-
 
     double Pip_mom_low = 0;
     double Pip_mom_high = 10;
@@ -184,30 +182,30 @@ int main(int argc, char* argv[]){
     	ExtractMomentumBranches(particle_list)  // Dynamically extract the necessary columns
     );
 
-    for (const auto& particle : particles) {
+    for (const auto& particle : particle_list) {
     	std::string mom_branch = particle.GetName() + "_mag";
     	std::string sector_branch = particle.GetSectorBranch();
 
-    	double mom_low = particle.GetMomentumLow();
-    	double mom_high = particle.GetMomentumHigh();
+    	double mom_low = particle.GetMomentumMin();
+    	double mom_high = particle.GetMomentumMax();
     	double mom_bin_width = particle.GetMomentumBinWidth();
     	int mom_bins = static_cast<int>((mom_high - mom_low) / mom_bin_width);
 
-    	int MM_bins = static_cast<int>((MM_high - MM_low) / MM_bin_width);
+    	int missing_mass_bins = static_cast<int>((missing_mass_high - missing_mass_low) / missing_mass_width);
 
     	for (int sector : particle.GetSectors()) {
     	    // Filter the dataframe for the current sector
     	    auto df_sector = df.Filter(sector_branch + " == " + std::to_string(sector));
 
-    	    if (particle.IsPhiBinned()) {
+    	    if (particle.IsPhiBinningEnabled()) {
     	        std::string phi_bin_branch = particle.GetName() + "_phiBin";
-    	        for (const auto& [phi_bin, label] : particle.GetPhiBinMap()) {
+    	        for (const auto& [phi_bin, label] : particle.GetPhiBinningLabels()) {
     	            auto df_phi = df_sector.Filter(phi_bin_branch + " == " + std::to_string(phi_bin));
 
     	            auto h = df_phi.Histo2D(
     	                {("hMM_vs_" + particle.GetName() + "_sec" + std::to_string(sector) + "_phi" + label).c_str(),
     	                 ("MM vs " + particle.GetName() + " Momentum [Sector " + std::to_string(sector) + ", Phi Bin: " + label + "]; Momentum (GeV); MM (GeV/c^2)").c_str(),
-    	                 mom_bins, mom_low, mom_high, MM_bins, MM_low, MM_high},
+    	                 mom_bins, mom_low, mom_high, missing_mass_bins, missing_mass_low, missing_mass_high},
     	                mom_branch, "missing_mass"
     	            );
     	        }
@@ -215,7 +213,7 @@ int main(int argc, char* argv[]){
     	        auto h = df_sector.Histo2D(
     	            {("hMM_vs_" + particle.GetName() + "_sec" + std::to_string(sector)).c_str(),
     	             ("MM vs " + particle.GetName() + " Momentum [Sector " + std::to_string(sector) + "]; Momentum (GeV); MM (GeV/c^2)").c_str(),
-    	             mom_bins, mom_low, mom_high, MM_bins, MM_low, MM_high},
+    	             mom_bins, mom_low, mom_high, missing_mass_bins, missing_mass_low, missing_mass_high},
     	            mom_branch, "missing_mass"
     	        );
     	    }
