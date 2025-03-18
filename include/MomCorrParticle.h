@@ -38,6 +38,7 @@ public:
     double GetMomentumMin() const;
     double GetMomentumMax() const;
     double GetBinWidth() const;
+    int GetBins() const;
     bool IsPhiBinningEnabled() const;
     std::function<double(double, double, int)> GetPhiShiftFunction() const;
     std::function<int(double)> GetPhiBinningFunction() const;

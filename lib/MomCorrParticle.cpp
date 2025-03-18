@@ -6,7 +6,6 @@
 #include <unordered_map>
 
 #include <ROOT/RDataFrame.hxx>
-#include <ROOT/>
 
 // Constructor
 MomCorrParticle::MomCorrParticle(const std::string& name,
@@ -32,13 +31,13 @@ double MomCorrParticle::GetMass() const { return mass_; }
 std::string MomCorrParticle::GetPxBranch() const { return pxBranch_; }
 std::string MomCorrParticle::GetPyBranch() const { return pyBranch_; }
 std::string MomCorrParticle::GetPzBranch() const { return pzBranch_; }
-
 std::string MomCorrParticle::GetSectorBranch() const { return sectorBranch_; }
 const std::vector<int>& MomCorrParticle::GetSectors() const { return sectors_; }
 int MomCorrParticle::GetDetector() const { return detector_; }
 double MomCorrParticle::GetMomentumMin() const { return pMin_; }
 double MomCorrParticle::GetMomentumMax() const { return pMax_; }
 double MomCorrParticle::GetBinWidth() const { return binWidth_; }
+int MomCorrParticle::GetBins() const { return static_cast<int>(std::round((pMax_ - pMin_) / binWidth_)); }
 bool MomCorrParticle::IsPhiBinningEnabled() const { return usePhiBinning_; }
 std::function<double(double, double, int)> MomCorrParticle::GetPhiShiftFunction() const { return phiShiftFunc_; }
 std::function<int(double)> MomCorrParticle::GetPhiBinningFunction() const { return phiBinningFunc_; }
