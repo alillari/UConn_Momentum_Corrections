@@ -1,15 +1,17 @@
-#ifndef COMPUTE_MISSING_MASS_HELPER_H
-#define COMPUTE_MISSING_MASS_HELPER_H
+#ifndef MISSING_MASS_HELPER_H
+#define MISSING_MASS_HELPER_H
 
+#include <ROOT/RDataFrame.hxx>
+#include <Math/Vector4D.h>
 #include <vector>
 #include <string>
 #include <tuple>
-#include <ROOT/RVec.hxx>
-#include <ROOT/RDataFrame.hxx>
-#include <Math/Vector4D.h>
 #include "MomCorrParticle.h"
 
-inline std::vector<std::string> ExtractMomentumBranches(const std::vector<MomCorrParticle>& particles) {
+constexpr double ELECTRON_MASS = 0.000511;
+constexpr double PROTON_MASS = 0.938272;
+
+std::vector<std::string> ExtractMomentumBranches(const std::vector<MomCorrParticle>& particles) {
     std::vector<std::string> branches;
     for (const auto& particle : particles) {
         branches.push_back(particle.GetPxBranch());
@@ -19,16 +21,14 @@ inline std::vector<std::string> ExtractMomentumBranches(const std::vector<MomCor
     return branches;
 }
 
-// Function to compute the missing mass from a vector of particle momenta
-inline double compute_missing_mass(const double beam_energy, const std::vector<std::tuple<double, double, double, double>>& particles) {
-    const double El_mass = 0.000511;        // Electron mass in GeV
-    const double Pro_mass = 0.938272;       // Proton mass in GeV
-
-    ROOT::Math::PxPyPzMVector beam_vector(0, 0, std::sqrt(beam_energy * beam_energy - El_mass * El_mass), El_mass);
-    ROOT::Math::PxPyPzMVector target_vector(0, 0, 0, Pro_mass);
+inline double compute_missing_mass(
+    const std::vector<std::tuple<float, float, float, double>>& particles,
+    double beam_energy
+) {
+    ROOT::Math::PxPyPzMVector beam_vector(0, 0, sqrt(pow(beam_energy, 2) - pow(ELECTRON_MASS, 2)), ELECTRON_MASS);
+    ROOT::Math::PxPyPzMVector target_vector(0, 0, 0, PROTON_MASS);
 
     ROOT::Math::PxPyPzMVector detected_sum(0, 0, 0, 0);
-
     for (const auto& [px, py, pz, mass] : particles) {
         detected_sum += ROOT::Math::PxPyPzMVector(px, py, pz, mass);
     }
@@ -37,35 +37,57 @@ inline double compute_missing_mass(const double beam_energy, const std::vector<s
     return missing_vector.M();
 }
 
-// Helper function to handle input momenta and call compute_missing_mass
-inline double compute_missing_mass_helper(const std::vector<ROOT::RVec<double>>& momenta, 
-                                          const std::vector<MomCorrParticle>& particle_list) {
-    std::vector<std::tuple<double, double, double, double>> particle_momenta;
-
-    size_t n_particles = particle_list.size();
-    for (size_t i = 0; i < n_particles; ++i) {
-        double mass = particle_list[i].GetMass();
-        particle_momenta.emplace_back(
-            momenta[3 * i][0],      // px
-            momenta[3 * i + 1][0],  // py
-            momenta[3 * i + 2][0],  // pz
-            mass
-        );
-    }
-
-    return compute_missing_mass(particle_momenta);
-}
-
-// Main function to define "missing_mass" in the RDF
 template <typename T>
-inline T DefineMissingMass(T& df, const std::vector<MomCorrParticle>& particle_list) {
-    return df.Define("missing_mass",
-        [=](const std::vector<ROOT::RVec<double>>& momenta) {
-            return compute_missing_mass_helper(momenta, particle_list);
-        },
-        ExtractMomentumBranches(particle_list)
-    );
+inline T DefineMissingMass(T& df, const std::vector<MomCorrParticle>& particle_list, double beam_energy) {
+    std::vector<std::string> branches = ExtractMomentumBranches(particle_list);
+
+    if (branches.size() == 3) {
+        return df.Define("missing_mass",
+            [=](float px1, float py1, float pz1) {
+                std::vector<std::tuple<float, float, float, double>> particle_momenta;
+                particle_momenta.emplace_back(px1, py1, pz1, particle_list[0].GetMass());
+                return compute_missing_mass(particle_momenta, beam_energy);
+            },
+            branches);
+    }
+    if (branches.size() == 6) {
+        return df.Define("missing_mass",
+            [=](float px1, float py1, float pz1, float px2, float py2, float pz2) {
+                std::vector<std::tuple<float, float, float, double>> particle_momenta;
+                particle_momenta.emplace_back(px1, py1, pz1, particle_list[0].GetMass());
+                particle_momenta.emplace_back(px2, py2, pz2, particle_list[1].GetMass());
+                return compute_missing_mass(particle_momenta, beam_energy);
+            },
+            branches);
+    }
+    else if (branches.size() == 9) {
+        return df.Define("missing_mass",
+            [=](float px1, float py1, float pz1, float px2, float py2, float pz2, float px3, float py3, float pz3) {
+                std::vector<std::tuple<float, float, float, double>> particle_momenta;
+                particle_momenta.emplace_back(px1, py1, pz1, particle_list[0].GetMass());
+                particle_momenta.emplace_back(px2, py2, pz2, particle_list[1].GetMass());
+                particle_momenta.emplace_back(px3, py3, pz3, particle_list[2].GetMass());
+                return compute_missing_mass(particle_momenta, beam_energy);
+            },
+            branches);
+    }
+    else if (branches.size() == 12) {
+        return df.Define("missing_mass",
+            [=](float px1, float py1, float pz1, float px2, float py2, float pz2, float px3, float py3, float pz3,
+                float px4, float py4, float pz4) {
+                std::vector<std::tuple<float, float, float, double>> particle_momenta;
+                particle_momenta.emplace_back(px1, py1, pz1, particle_list[0].GetMass());
+                particle_momenta.emplace_back(px2, py2, pz2, particle_list[1].GetMass());
+                particle_momenta.emplace_back(px3, py3, pz3, particle_list[2].GetMass());
+                particle_momenta.emplace_back(px4, py4, pz4, particle_list[3].GetMass());
+                return compute_missing_mass(particle_momenta, beam_energy);
+            },
+            branches);
+    }
+    else {
+        throw std::runtime_error("Unsupported number of particles. Adjust DefineMissingMass function.");
+    }
 }
 
-#endif  // COMPUTE_MISSING_MASS_HELPER_H
+#endif  // MISSING_MASS_HELPER_H
 

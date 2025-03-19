@@ -18,6 +18,7 @@
 #include <filesystem>
 
 #include <MomCorrParticle.h>
+#include "ComputeMissingMassHelper.h"
 
 int main(int argc, char* argv[]){
     ROOT::EnableImplicitMT();
@@ -78,7 +79,6 @@ int main(int argc, char* argv[]){
     //Beam and particle information, adjust for your data and particles
     //Current beam energy is for RGA Sp19
     const double beam_energy = 10.1998;
-    const double proton_mass = 0.938;
     const double El_mass = 0.000511;
     const double Pro_mass = 0.938272088;
     const double Pip_mass = 0.140;
@@ -110,7 +110,7 @@ int main(int argc, char* argv[]){
 
     //Define your phi shift. I pulled this from Richard's code. Good luck.
     //Variables passed in need to be phi, momentum, sector. Otherwise code can't call them correctly.
-    auto El_compute_local_phi  = [](double ElPhi, double El, int esec) {
+    auto El_compute_local_phi  = [](double ElPhi, float El, int esec) {
     	double localPhi = ElPhi - (esec - 1) * 60;
     	return localPhi - (30 / El);
     };
@@ -125,7 +125,6 @@ int main(int argc, char* argv[]){
 
     std::unordered_map<int, std::string> El_phi_bin_map = {{1, "negative"}, {2, "neutral"}, {3,"positive"}};
 
-
     MomCorrParticle Electron("El", El_mass, "ex", "ey", "ez", "esec", El_detector, six_sector, El_mom_low, El_mom_high, mom_bin, El_phi_flag, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
     MomCorrParticle Pip("Pip", Pip_mass, "pipx", "pipy", "pipz", "pipsec", Pip_detector, six_sector, Pip_mom_low, Pip_mom_high, mom_bin, Pip_phi_flag, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
 
@@ -137,25 +136,8 @@ int main(int argc, char* argv[]){
     	df = particle.AddBranches(df);
     }
 
-    df = df.Define("missing_mass",
-    	[=](const ROOT::RVec<double>& px, const ROOT::RVec<double>& py, const ROOT::RVec<double>& pz) {
-    	    std::vector<std::tuple<double, double, double, double>> particle_momenta;
-
-    	    size_t n_particles = particle_list.size();
-    	    for (size_t i = 0; i < n_particles; ++i) {
-    	        double mass = particle_list[i].GetMass();
-    	        particle_momenta.emplace_back(px[i], py[i], pz[i], mass);
-    	    }
-
-    	    return compute_missing_mass(particle_momenta);
-    	},
-    	ExtractMomentumBranches(particle_list)  // Dynamically extract all required branches
-    );
-
-
-
-    std::cout<<"Not here."<<std::endl;
-
+    df = DefineMissingMass(df, particle_list, beam_energy);
+   
     for (const auto& particle : particle_list) {
     	std::string mom_branch = particle.GetName() + "_mag";
     	std::string sector_branch = particle.GetSectorBranch();
@@ -176,6 +158,7 @@ int main(int argc, char* argv[]){
     	        for (const auto& [phi_bin, label] : particle.GetPhiBinningLabels()) {
     	            auto df_phi = df_sector.Filter(phi_bin_branch + " == " + std::to_string(phi_bin));
 
+		    std::cout<<"Inside phi loop, inside sector loop?"<<std::endl;
     	            auto h = df_phi.Histo2D(
     	                {("hMM_vs_" + particle.GetName() + "_sec" + std::to_string(sector) + "_phi" + label).c_str(),
     	                 ("MM vs " + particle.GetName() + " Momentum [Sector " + std::to_string(sector) + ", Phi Bin: " + label + "]; Momentum (GeV); MM (GeV/c^2)").c_str(),
@@ -183,6 +166,7 @@ int main(int argc, char* argv[]){
     	                mom_branch, "missing_mass"
     	            );
 		    h->Write();
+		    std::cout<<"Well we wrote that one."<<std::endl;
     	        }
     	    } else {
     	        auto h = df_sector.Histo2D(
@@ -195,6 +179,8 @@ int main(int argc, char* argv[]){
     	    }
     	}
     }
+
+    outputFile->Close();
 
     return 0;
 }

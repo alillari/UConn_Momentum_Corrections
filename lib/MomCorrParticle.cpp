@@ -31,7 +31,7 @@ double MomCorrParticle::GetMass() const { return mass_; }
 std::string MomCorrParticle::GetPxBranch() const { return pxBranch_; }
 std::string MomCorrParticle::GetPyBranch() const { return pyBranch_; }
 std::string MomCorrParticle::GetPzBranch() const { return pzBranch_; }
-std::string MomCorrParticle::GetSectorBranch() const { return sectorBranch_; }
+std::string MomCorrParticle::GetSectorBranch() const { return name_ + "_sec"; }
 const std::vector<int>& MomCorrParticle::GetSectors() const { return sectors_; }
 int MomCorrParticle::GetDetector() const { return detector_; }
 double MomCorrParticle::GetMomentumMin() const { return pMin_; }
@@ -44,6 +44,12 @@ std::function<int(double)> MomCorrParticle::GetPhiBinningFunction() const { retu
 std::unordered_map<int, std::string> MomCorrParticle::GetPhiBinningLabels() const { return phiBinningLabels_; }
 
 ROOT::RDF::RNode MomCorrParticle::AddBranches(ROOT::RDF::RNode df) const {
+    std::string secInt = name_ + "_sec"; 
+    df = df.Define(secInt, 
+		   [this](float esec) {
+		   	return static_cast<int>(esec);
+		   }, {sectorBranch_});
+	
     std::string pBranch = name_ + "_mag";
     std::string thetaBranch = name_ + "_theta";
     std::string phiBranch = name_ + "_phi";
@@ -52,25 +58,25 @@ ROOT::RDF::RNode MomCorrParticle::AddBranches(ROOT::RDF::RNode df) const {
 
     // Define momentum magnitude
     df = df.Define(pBranch,
-                   [this](double px, double py, double pz) {
+                   [this](float px, float py, float pz) {
                        return std::sqrt(px * px + py * py + pz * pz);
                    }, {pxBranch_, pyBranch_, pzBranch_});
 
     // Define theta (polar angle)
     df = df.Define(thetaBranch,
-                   [this](double p, double pz) {
+                   [this](float p, float pz) {
                        return (p > 0) ? std::acos(pz / p) : -999.0;
                    }, {pBranch, pzBranch_});
 
     // Define phi (azimuthal angle)
     df = df.Define(phiBranch,
-                   [this](double px, double py) {
+                   [this](float px, float py) {
                        return (180.0 / M_PI)*std::atan2(py, px);
                    }, {pxBranch_, pyBranch_});
 
     df = df.Define(localPhiSBranch,
-                   [this](double phi, double p, int sector) { return phiShiftFunc_(phi, p, sector); },
-                   {phiBranch, pBranch, sectorBranch_});
+                   [this](double phi, float p, int sector) { return phiShiftFunc_(phi, p, sector); },
+                   {phiBranch, pBranch, secInt});
 
     df = df.Define(phiBin,
 		    [this](double localPhiS) { return phiBinningFunc_(localPhiS);},
