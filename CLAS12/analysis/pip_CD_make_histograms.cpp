@@ -19,16 +19,6 @@
 
 #include <MomCorrParticle.h>
 
-std::vector<std::string> ExtractMomentumBranches(const std::vector<MomCorrParticle>& particles) {
-    std::vector<std::string> branches;
-    for (const auto& particle : particles) {
-        branches.push_back(particle.GetPxBranch());
-        branches.push_back(particle.GetPyBranch());
-        branches.push_back(particle.GetPzBranch());
-    }
-    return branches;
-}
-
 int main(int argc, char* argv[]){
     ROOT::EnableImplicitMT();
 
@@ -136,31 +126,10 @@ int main(int argc, char* argv[]){
     std::unordered_map<int, std::string> El_phi_bin_map = {{1, "negative"}, {2, "neutral"}, {3,"positive"}};
 
 
-    MomCorrParticle Electron("El", El_mass, "e_px", "e_py", "e_pz", "esec", El_detector, six_sector, El_mom_low, El_mom_high, mom_bin, El_phi_flag, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
-    MomCorrParticle Pip("Pip", Pip_mass, "pip_px", "pip_py", "pip_pz", "pipsec", Pip_detector, six_sector, Pip_mom_low, Pip_mom_high, mom_bin, Pip_phi_flag, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
+    MomCorrParticle Electron("El", El_mass, "ex", "ey", "ez", "esec", El_detector, six_sector, El_mom_low, El_mom_high, mom_bin, El_phi_flag, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
+    MomCorrParticle Pip("Pip", Pip_mass, "pipx", "pipy", "pipz", "pipsec", Pip_detector, six_sector, Pip_mom_low, Pip_mom_high, mom_bin, Pip_phi_flag, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
 
     std::vector<MomCorrParticle> particle_list = {Electron, Pip};
-
-    //Logic for calculating Missing Mass
-    auto compute_missing_mass = [&](const std::vector<std::tuple<double, double, double, double>>& particles) {
-    	ROOT::Math::PxPyPzMVector beam_vector(0, 0, sqrt(pow(beam_energy, 2) - pow(El_mass, 2)), El_mass);
-    	ROOT::Math::PxPyPzMVector target_vector(0, 0, 0, Pro_mass);
-
-    	// Sum of all detected particle four-vectors
-    	ROOT::Math::PxPyPzMVector detected_sum(0, 0, 0, 0);
-
-    	for (const auto& [px, py, pz, mass] : particles) {
-        	detected_sum += ROOT::Math::PxPyPzMVector(px, py, pz, mass);
-    	}
-
-    	// Compute missing four-vector
-    	auto missing_vector = (beam_vector + target_vector) - detected_sum;
-
-    	// Return missing mass
-    	return missing_vector.M();
-    };
-
-
 
     std::vector<std::string> momentum_columns;
     //Main logic loop for creating histograms
@@ -168,19 +137,24 @@ int main(int argc, char* argv[]){
     	df = particle.AddBranches(df);
     }
 
-    df = df.Define("missing_mass", 
-    [=](const ROOT::RVec<double>& px, const ROOT::RVec<double>& py, const ROOT::RVec<double>& pz) {
-        	std::vector<std::tuple<double, double, double, double>> particle_momenta;
-        
-        	for (size_t i = 0; i < px.size(); ++i) {
-            		double mass = particle_list[i].GetMass();
-            		particle_momenta.emplace_back(px[i], py[i], pz[i], mass);
-        	}
-        
-        	return compute_missing_mass(particle_momenta);
+    df = df.Define("missing_mass",
+    	[=](const ROOT::RVec<double>& px, const ROOT::RVec<double>& py, const ROOT::RVec<double>& pz) {
+    	    std::vector<std::tuple<double, double, double, double>> particle_momenta;
+
+    	    size_t n_particles = particle_list.size();
+    	    for (size_t i = 0; i < n_particles; ++i) {
+    	        double mass = particle_list[i].GetMass();
+    	        particle_momenta.emplace_back(px[i], py[i], pz[i], mass);
+    	    }
+
+    	    return compute_missing_mass(particle_momenta);
     	},
-    	ExtractMomentumBranches(particle_list)  // Dynamically extract the necessary columns
+    	ExtractMomentumBranches(particle_list)  // Dynamically extract all required branches
     );
+
+
+
+    std::cout<<"Not here."<<std::endl;
 
     for (const auto& particle : particle_list) {
     	std::string mom_branch = particle.GetName() + "_mag";
@@ -208,6 +182,7 @@ int main(int argc, char* argv[]){
     	                 mom_bins, mom_low, mom_high, missing_mass_bins, missing_mass_low, missing_mass_high},
     	                mom_branch, "missing_mass"
     	            );
+		    h->Write();
     	        }
     	    } else {
     	        auto h = df_sector.Histo2D(
@@ -216,6 +191,7 @@ int main(int argc, char* argv[]){
     	             mom_bins, mom_low, mom_high, missing_mass_bins, missing_mass_low, missing_mass_high},
     	            mom_branch, "missing_mass"
     	        );
+		h->Write();
     	    }
     	}
     }
