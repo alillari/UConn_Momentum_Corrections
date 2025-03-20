@@ -92,7 +92,7 @@ int main(int argc, char* argv[]){
     
     double missing_mass_low = .8;
     double missing_mass_high = 1.2;
-    int missing_mass_width = .05;
+    double missing_mass_width = .005;
 
     double mom_bin = .05;
 
@@ -158,7 +158,6 @@ int main(int argc, char* argv[]){
     	        for (const auto& [phi_bin, label] : particle.GetPhiBinningLabels()) {
     	            auto df_phi = df_sector.Filter(phi_bin_branch + " == " + std::to_string(phi_bin));
 
-		    std::cout<<"Inside phi loop, inside sector loop?"<<std::endl;
     	            auto h = df_phi.Histo2D(
     	                {("hMM_vs_" + particle.GetName() + "_sec" + std::to_string(sector) + "_phi" + label).c_str(),
     	                 ("MM vs " + particle.GetName() + " Momentum [Sector " + std::to_string(sector) + ", Phi Bin: " + label + "]; Momentum (GeV); MM (GeV/c^2)").c_str(),
@@ -166,7 +165,6 @@ int main(int argc, char* argv[]){
     	                mom_branch, "missing_mass"
     	            );
 		    h->Write();
-		    std::cout<<"Well we wrote that one."<<std::endl;
     	        }
     	    } else {
     	        auto h = df_sector.Histo2D(
