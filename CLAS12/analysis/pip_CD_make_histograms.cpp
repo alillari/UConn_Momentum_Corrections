@@ -89,7 +89,10 @@ int main(int argc, char* argv[]){
     //	name, mass (GeV), branch names for momentums, branch name for sector, vector for sectors, detector (2 for FD, 3 for CD), min mommentum (GeV), max mommentum (GeV), mommentum bin width (GeV), more
     //NOTE: Be generous with range and number of bins. You can always decrease the range and increase bin size in the fitting code
     //	    But you can't increase the number of bins after
-    
+   
+    TString channel_name("epip(N)");
+    bool outbending = false;
+
     double missing_mass_low = .8;
     double missing_mass_high = 1.2;
     double missing_mass_width = .005;
