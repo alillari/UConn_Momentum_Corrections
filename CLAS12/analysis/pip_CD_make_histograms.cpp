@@ -18,7 +18,7 @@
 #include <filesystem>
 
 #include <MomCorrParticle.h>
-#include "ComputeMissingMassHelper.h"
+#include <ComputeMissingMassHelper.h>
 
 int main(int argc, char* argv[]){
     ROOT::EnableImplicitMT();
@@ -26,20 +26,28 @@ int main(int argc, char* argv[]){
     //Logic for correct usage of command
 
     if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <directory/path/*.root> <num_files | all>\n";
+        std::cerr << "Usage: " << argv[0] << " <directory/path/> <num_files | all>\n";
         return 1;
     }
 
     TString pathPattern = argv[1];
-    TString fileList = gSystem->GetFromPipe(Form("ls %s 2>/dev/null", pathPattern.Data()));
+    
+    TSystemDirectory dir("inputDir", pathPattern);
+    TList* files = dir.GetListOfFiles();
 
     std::vector<TString> rootFiles;
-    std::istringstream stream(fileList.Data());
-    TString file;
-    while (stream >> file) {
-        rootFiles.push_back(file);
-    }
+    TIter next(files);
+    TSystemFile* file;
 
+    while ((file = (TSystemFile*)next())) {
+    	TString fname = file->GetName();
+    	if (!file->IsDirectory() && fname.EndsWith(".root")) {
+        	rootFiles.push_back(
+            	pathPattern + "/" + fname
+        	);
+    	}
+    }
+    
     if (rootFiles.empty()) {
         std::cerr << "No ROOT files found matching pattern: " << pathPattern << "\n";
         return 1;
@@ -107,6 +115,10 @@ int main(int argc, char* argv[]){
     int El_detector = 2;
     int Pip_detector = 3;
 
+    double dp_low = -.2;
+    double dp_high = .2;
+    double dp_bin_width = .02;
+
     //Define your phi shift. I pulled this from Richard's code. Good luck.
     //Variables passed in need to be phi, momentum, sector. Otherwise code can't call them correctly.
     auto El_compute_local_phi  = [](double ElPhi, float El, int esec) {
@@ -136,7 +148,8 @@ int main(int argc, char* argv[]){
     }
 
     df = DefineMissingMass(df, particle_list, beam_energy);
-   
+    //df = DefineDP(df, particle_list, beam_energy);
+
     for (const auto& particle : particle_list) {
     	std::string mom_branch = particle.GetName() + "_mag";
     	std::string sector_branch = particle.GetSectorBranch();
@@ -164,6 +177,10 @@ int main(int argc, char* argv[]){
     	                mom_branch, "missing_mass"
     	            );
 		    h->Write();
+
+		    //auto h_DP = df_phi.Histo2D(
+		    //	{().c_str()},
+
     	        }
     	    } else {
     	        auto h = df_sector.Histo2D(
