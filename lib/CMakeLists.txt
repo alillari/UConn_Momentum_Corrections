@@ -10,5 +10,5 @@ target_include_directories(momcorr PUBLIC
 target_link_libraries(momcorr PUBLIC
     ROOT::Core
     ROOT::Tree
-    ROOT::RDataFrame
+    ROOT::RIO
 )

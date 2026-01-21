@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find ROOT from your environment (conda, cvmfs, etc.)
-find_package(ROOT REQUIRED COMPONENTS RIO Tree RDataFrame)
+find_package(ROOT REQUIRED COMPONENTS RIO Tree)
 
 # Make headers visible everywhere
 include_directories(

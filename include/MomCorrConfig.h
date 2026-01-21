@@ -15,7 +15,7 @@ public:
     std::string GetSpecifier() const;
     double GetBeamEnergy() const;
     std::string GetBending() const;
-    std::string GetChannelName() const;
+    std::string GetChannel() const;
 
     // Missing mass
     double GetMissingMassLow() const;
