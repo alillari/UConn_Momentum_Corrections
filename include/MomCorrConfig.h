@@ -2,10 +2,8 @@
 #define MOMCORRCONFIG_H
 
 #include <string>
-#include <vector>
-#include <unordered_map>
-
 #include <nlohmann/json.hpp>
+
 using json = nlohmann::json;
 
 class MomCorrConfig {

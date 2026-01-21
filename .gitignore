@@ -3,3 +3,9 @@
 *.exe
 *.o
 /CLAS12/analysis_out/
+build/
+CLAS12/executable/
+CLAS12/analysis_out/
+*.so
+*.dylib
+*.pcm

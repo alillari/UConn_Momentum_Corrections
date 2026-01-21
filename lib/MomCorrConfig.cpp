@@ -1,55 +1,56 @@
 #include "MomCorrConfig.h"
-#include <cmath>
-#include <functional>
-#include <vector>
 #include <string>
-#include <unordered_map>
-
-#include <ROOT/RDataFrame.hxx>
+#include <fstream>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
 //Constructor
-MomCorrConfig::MomCorrConfig(const std::string& jsonFile) :    
+MomCorrConfig::MomCorrConfig(const std::string& jsonFile) {
+	LoadJSON(jsonFile);
+}	
 
-//Getters
-double MomCorrConfig::getBeamE();
-
-double MomCorrConfig::getmmLow() const { return }
-double MomCorrConfig:: 
-double MomCorrConfig::
-
-double MomCorrConfig::
-double MomCorrConfig::
-double MomCorrConfig::
-
-double MomCorrConfig::
-
-std::string MomCorrConfig::
-std::string MomCorrConfig::
-std::string MomCorrConfig::
-
-//Functions
-
+//Setter
 void MomCorrConfig::LoadJSON(const std::string& filename)
 {
     std::ifstream f(filename);
+    
+    if (!f.is_open()) {
+        throw std::runtime_error("MomCorrConfig: cannot open config file " + filename);
+    }
+    
     json j;
     f >> j;
 
-    specifier_ = j["dataset"]["specifier"];
-    beamEnergy_ = j["dataset"]["beam_energy"];
-    bending_ = j["dataset"]["bending"];
-    channel_ = j["dataset"]["channel"];
+    specifier_ = j.at("dataset").at("specifier").get<std::string>();
+    beamEnergy_ = j.at("dataset").at("beam_energy").get<double>();
+    bending_ = j.at("dataset").at("bending").get<std::string>();
+    channel_ = j.at("dataset").at("channel").get<std::string>();
 
-    mmLow_ = j["missing_mass"]["low"];
-    mmHigh_ = j["missing_mass"]["high"];
-    mmBin_ = j["missing_mass"]["bin_width"];
+    mmLow_ = j.at("missing_mass").at("low").get<double>();
+    mmHigh_ = j.at("missing_mass").at("high").get<double>();
+    mmBin_ = j.at("missing_mass").at("bin_width").get<double>();
 
-    dpLow_ = j["momentum_correction"]["dp_low"];
-    dpHigh_ = j["momentum_correction"]["dp_high"];
-    dpBin_ = j["momentum_correction"]["dp_bin_width"];
+    dpLow_ = j.at("momentum_correction").at("dp_low").get<double>();
+    dpHigh_ = j.at("momentum_correction").at("dp_high").get<double>();
+    dpBin_ = j.at("momentum_correction").at("dp_bin_width").get<double>();
 
-    defaultMomBin_ = j["defaults"]["momentum_bin"];
+    defaultMomBin_ = j.at("defaults").at("momentum_bin").get<double>();
 }
+
+//Getters
+double MomCorrConfig::GetBeamEnergy() const {return beamEnergy_;}
+
+double MomCorrConfig::GetMissingMassLow() const { return mmLow_;}
+double MomCorrConfig::GetMissingMassHigh() const { return mmHigh_;} 
+double MomCorrConfig::GetMissingMassBinWidth() const { return mmBin_;}
+
+double MomCorrConfig::GetDpLow() const { return dpLow_;}
+double MomCorrConfig::GetDpHigh() const { return dpHigh_;}
+double MomCorrConfig::GetDpBinWidth() const { return dpBin_;}
+
+double MomCorrConfig::GetDefaultMomentumBin() const { return defaultMomBin_;}
+
+std::string MomCorrConfig::GetSpecifier() const { return specifier_;}
+std::string MomCorrConfig::GetBending() const { return bending_;}
+std::string MomCorrConfig::GetChannel() const { return channel_;}
