@@ -1,4 +1,5 @@
 *.root
 *.ipynb
 *.exe
+*.o
 /CLAS12/analysis_out/
