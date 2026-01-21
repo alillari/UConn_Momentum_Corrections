@@ -8,8 +8,11 @@
 #include <tuple>
 #include "MomCorrParticle.h"
 
+//Units in GeV
 constexpr double ELECTRON_MASS = 0.000511;
 constexpr double PROTON_MASS = 0.938272;
+constexpr double PIP_MASS = 0.13957;
+constexpr double NEUTRON_MASS = 0.939565;
 
 std::vector<std::string> ExtractMomentumBranches(const std::vector<MomCorrParticle>& particles) {
     std::vector<std::string> branches;
@@ -89,5 +92,38 @@ inline T DefineMissingMass(T& df, const std::vector<MomCorrParticle>& particle_l
     }
 }
 
+//Goal of this is to calculate the true momentum magnitude of the pion
+double findTruePionMom(const ROOT::Math::PxPyPzMVector &beam,
+		const ROOT::Math::PxPyPzMVector &target,
+		const ROOT::Math::PxPyPzMVector &scattered,
+		const ROOT::Math::PxPyPzMVector &reconPip) {
+
+	ROOT::Math::PxPyPzMVector known = beam + target - scattered;
+	double cosTheta = known.Dot(reconPip) / (known.R() + reconPip.R());
+
+	//We assume the direction is along the measured direction, but magnitude is adjustable
+	//Calculated using conservation of 4 momentum
+	double alpha = known.P()*known.P()*cosTheta*cosTheta - known.E()*known.E();								//Quadratic term
+	double beta = (NEUTRON_MASS*NEUTRON_MASS - PIP_MASS*PIP_MASS - known.M2())*cosTheta*known.P();					        //Linear term
+	double gamma = .25*std::pow(NEUTRON_MASS*NEUTRON_MASS - PIP_MASS*PIP_MASS - known.M2(),2) - known.E()*known.E()*PIP_MASS*PIP_MASS;	//Constant term
+
+	if(beta*beta - 4*alpha*gamma < 0){
+		std::cout<<"We have an event inconsistent with our assumptions. This is not good."<<std::endl;
+		return -1.0;
+	}
+
+	double soln1 = (-beta + std::sqrt(beta*beta - 4*alpha*gamma))/(2*alpha);
+	double soln2 = (-beta - std::sqrt(beta*beta - 4*alpha*gamma))/(2*alpha);
+
+	if(soln1 - reconPip.P() < soln2 - reconPip.P()){
+		return soln1;
+	} else {
+		return soln2;
+	}
+}
+
+//inline T defineDP(T& df, const std::vector<MomCorrParticle>& particle_list, double beam_energy) {
+//
+//}
 #endif  // MISSING_MASS_HELPER_H
 

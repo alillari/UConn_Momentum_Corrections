@@ -3,28 +3,30 @@
 
 #include <string>
 #include <vector>
-#include <functional>
 #include <unordered_map>
 
 #include <ROOT/RDataFrame.hxx>
+
+enum class PhiHandling {
+    None,
+    CLAS12_CD_Standard,
+    CLAS12_FD_Standard
+};
 
 class MomCorrParticle {
 public:
     // Constructor
     MomCorrParticle(const std::string& name,
-		    const double mass, 
-                    const std::string& pxBranch, 
-                    const std::string& pyBranch, 
-                    const std::string& pzBranch, 
+                    const double mass,
+                    const std::string& pxBranch,
+                    const std::string& pyBranch,
+                    const std::string& pzBranch,
                     const std::string& sectorBranch,
-		    const int detector, 
-                    const std::vector<int>& sectors, 
+                    const int detector,
+                    const std::vector<int>& sectors,
                     double pMin, double pMax, double binWidth,
-		    bool usePhiBinning,
-		    std::function<double(double, double, int)> phiShiftFunc,
-		    std::function<int(double)> phiBinningFunction,
-		    std::unordered_map<int, std::string> phiBinningLabels
-		    );
+                    PhiHandling phiHandling,
+                    bool usePhiBinning);
 
     // Getters
     std::string GetName() const;
@@ -35,29 +37,44 @@ public:
     std::string GetSectorBranch() const;
     int GetDetector() const;
     const std::vector<int>& GetSectors() const;
+
     double GetMomentumMin() const;
     double GetMomentumMax() const;
     double GetMomentumBinWidth() const;
     int GetBins() const;
+
+    PhiHandling GetPhiHandling() const;
     bool IsPhiBinningEnabled() const;
-    std::function<double(double, double, int)> GetPhiShiftFunction() const;
-    std::function<int(double)> GetPhiBinningFunction() const;
+
+    // Phi-related helpers
+    double ComputeLocalPhi(double phi, double p, int sector) const;
+    int PhiBin(double localPhi) const;
     std::unordered_map<int, std::string> GetPhiBinningLabels() const;
 
+    // RDataFrame interface
     ROOT::RDF::RNode AddBranches(ROOT::RDF::RNode df) const;
 
 private:
+    // Identity
     std::string name_;
     double mass_;
-    std::string pxBranch_, pyBranch_, pzBranch_, sectorBranch_;
+
+    // Input branches
+    std::string pxBranch_;
+    std::string pyBranch_;
+    std::string pzBranch_;
+    std::string sectorBranch_;
+
+    // Configuration
     int detector_;
     std::vector<int> sectors_;
-    double pMin_, pMax_, binWidth_;
+    double pMin_;
+    double pMax_;
+    double binWidth_;
+
+    // Phi handling
+    PhiHandling phiHandling_;
     bool usePhiBinning_;
-    std::function<double(double, double, int)> phiShiftFunc_;
-    std::function<int(double)> phiBinningFunc_;
-    std::unordered_map<int, std::string> phiBinningLabels_;
 };
 
 #endif // MOMCORRPARTICLE_H
-

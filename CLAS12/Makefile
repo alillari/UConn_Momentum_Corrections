@@ -1,3 +1,5 @@
+#For comiling the Libs of predefined functions
+
 # Define paths
 SRC_DIR = analysis
 BIN_DIR = executables

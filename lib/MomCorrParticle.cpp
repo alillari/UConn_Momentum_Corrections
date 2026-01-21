@@ -17,13 +17,11 @@ MomCorrParticle::MomCorrParticle(const std::string& name,
                                  const int detector,
 				 const std::vector<int>& sectors,
                                  double pMin, double pMax, double binWidth,
-				 bool usePhiBinning,
-				 std::function<double(double, double, int)> phiShiftFunc,
-				 std::function<int(double)> phiBinningFunc,
-				 std::unordered_map<int, std::string> phiBinningLabels)
+				 PhiHandling phiHandling,
+				 bool usePhiBinning)
     : name_(name), mass_(mass), pxBranch_(pxBranch), pyBranch_(pyBranch), pzBranch_(pzBranch), 
       sectorBranch_(sectorBranch), detector_(detector), sectors_(sectors), pMin_(pMin), pMax_(pMax), binWidth_(binWidth), 
-      usePhiBinning_(usePhiBinning), phiShiftFunc_(phiShiftFunc), phiBinningFunc_(phiBinningFunc), phiBinningLabels_(phiBinningLabels) {}
+      phiHandling_(phiHandling), usePhiBinning_(usePhiBinning) {}
 
 // Getters
 std::string MomCorrParticle::GetName() const { return name_; }
@@ -38,10 +36,65 @@ double MomCorrParticle::GetMomentumMin() const { return pMin_; }
 double MomCorrParticle::GetMomentumMax() const { return pMax_; }
 double MomCorrParticle::GetMomentumBinWidth() const { return binWidth_; }
 int MomCorrParticle::GetBins() const { return static_cast<int>(std::round((pMax_ - pMin_) / binWidth_)); }
+PhiHandling MomCorrParticle::GetPhiHandling() const { return phiHandling_; }
 bool MomCorrParticle::IsPhiBinningEnabled() const { return usePhiBinning_; }
-std::function<double(double, double, int)> MomCorrParticle::GetPhiShiftFunction() const { return phiShiftFunc_; }
-std::function<int(double)> MomCorrParticle::GetPhiBinningFunction() const { return phiBinningFunc_; }
-std::unordered_map<int, std::string> MomCorrParticle::GetPhiBinningLabels() const { return phiBinningLabels_; }
+
+double MomCorrParticle::ComputeLocalPhi(double phi, double p, int sector) const
+{
+    switch (phiHandling_) {
+        case PhiHandling::CLAS12_FD_Standard: {
+            double local = phi - (sector - 1) * 60.0;
+            return local - (30.0 / p);
+        }
+        case PhiHandling::None:
+        default:
+            return phi;
+    }
+}
+
+std::unordered_map<int, std::string> MomCorrParticle::GetPhiBinningLabels() const
+{
+    if (!usePhiBinning_) {
+        return {};
+    }
+
+    switch (phiHandling_) {
+
+	//Inherited from Richard, 1 is less than -5 deg, 2 is between -5 and 5 deg, and 3 is larger than 5 deg
+        case PhiHandling::CLAS12_FD_Standard:
+            return {
+                {1, "negative"},
+                {2, "neutral"},
+                {3, "positive"}
+            };
+
+        case PhiHandling::CLAS12_CD_Standard:
+            return {
+	        {0, "no phi bin"}
+	    };
+
+        case PhiHandling::None:
+        default:
+            return {
+	        {0, "no phi bin"}
+	    };
+    }
+}
+
+int MomCorrParticle::PhiBin(double localPhi) const {
+    switch (phiHandling_) {
+    	case PhiHandling::CLAS12_FD_Standard:
+	    if(localPhi > 5){ return 3;};
+	    if(localPhi <= -5){ return 1;}
+	    else{return 2;};
+	case PhiHandling::CLAS12_CD_Standard:
+	    return 0; 
+
+	case PhiHandling::None:
+	default:
+	    return 0;  
+    }
+}
 
 ROOT::RDF::RNode MomCorrParticle::AddBranches(ROOT::RDF::RNode df) const {
     std::string secInt = name_ + "_sec"; 
@@ -75,11 +128,11 @@ ROOT::RDF::RNode MomCorrParticle::AddBranches(ROOT::RDF::RNode df) const {
                    }, {pxBranch_, pyBranch_});
 
     df = df.Define(localPhiSBranch,
-                   [this](double phi, float p, int sector) { return phiShiftFunc_(phi, p, sector); },
+                   [this](double phi, float p, int sector) { return ComputeLocalPhi(phi, p, sector); },
                    {phiBranch, pBranch, secInt});
 
     df = df.Define(phiBin,
-		    [this](double localPhiS) { return phiBinningFunc_(localPhiS);},
+		    [this](double localPhiS) { return PhiBin(localPhiS);},
 		    {localPhiSBranch});
 
     return df;
