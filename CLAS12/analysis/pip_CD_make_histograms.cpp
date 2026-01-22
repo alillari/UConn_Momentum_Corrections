@@ -136,8 +136,8 @@ int main(int argc, char* argv[]){
 
     std::unordered_map<int, std::string> El_phi_bin_map = {{1, "negative"}, {2, "neutral"}, {3,"positive"}};
 
-    MomCorrParticle Electron("El", El_mass, "ex", "ey", "ez", "esec", El_detector, six_sector, El_mom_low, El_mom_high, mom_bin, El_phi_flag, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
-    MomCorrParticle Pip("Pip", Pip_mass, "pipx", "pipy", "pipz", "pipsec", Pip_detector, six_sector, Pip_mom_low, Pip_mom_high, mom_bin, Pip_phi_flag, El_compute_local_phi, El_phi_binning, El_phi_bin_map);
+    MomCorrParticle Electron("El", El_mass, "ex", "ey", "ez", "esec", El_detector, six_sector, El_mom_low, El_mom_high, mom_bin, PhiHandling::CLAS12_FD_Standard, true);
+    MomCorrParticle Pip("Pip", Pip_mass, "pipx", "pipy", "pipz", "pipsec", Pip_detector, six_sector, Pip_mom_low, Pip_mom_high, mom_bin, PhiHandling::CLAS12_CD_Standard, false);
 
     std::vector<MomCorrParticle> particle_list = {Electron, Pip};
 

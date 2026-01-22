@@ -7,8 +7,4 @@ target_include_directories(momcorr PUBLIC
     ${PROJECT_SOURCE_DIR}/include
 )
 
-target_link_libraries(momcorr PUBLIC
-    ROOT::Core
-    ROOT::Tree
-    ROOT::RIO
-)
+target_link_libraries(momcorr PUBLIC ROOT::Core ROOT::RIO ROOT::Tree ROOT::Thread ROOT::ROOTDataFrame)
