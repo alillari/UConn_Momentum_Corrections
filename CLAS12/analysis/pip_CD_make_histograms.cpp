@@ -65,88 +65,46 @@ int main(int argc, char* argv[]){
         }
     }
 
-    //Add logic for checking if the last input is actually a JSON file
+    //TODO: Add logic for checking if the last input is actually a JSON file
 	
     std::string configFile = argv[3];
     MomCorrConfig config(configFile);
 
     TChain chain("h22");  // TTree name is "h22", change as needed
+			  // h22 is the default TTree name for the UConn group, for some reason
     for (int i = 0; i < numFilesToProcess; ++i) {
         chain.Add(rootFiles[i]);
     } 
 
     const double beam_energy = config.GetBeamEnergy();
+    const TString channel_name = config.GetChannel();
+    const TString bending = config.GetBending();
+    const TString specifiers = config.GetSpecifiers();
+
+    const double mom_bin = config.GetDefaultMomentumBin();
 
     const double missing_mass_low  = config.GetMissingMassMin();
     const double missing_mass_high = config.GetMissingMassMax();
     const double missing_mass_width = config.GetMissingMassBinWidth();
     
-    const double dp_low = -.2;
-    const double dp_high = .2;
-    const double dp_bin_width = .02;
+    const double dp_low = config.GetDpMin();
+    const double dp_high = config.GetDpHigh();
+    const double dp_bin_width = config.GetDpBinWidth();
 
-    TString specifiers = "CLAS12_CD_RGA_Sp19_In_pip";
     TString dataOutLocation = "../analysis_out/" + specifiers + "/";
     TString outputFileName = dataOutLocation + specifiers + "_raw_histograms.root";
     TFile* outputFile = new TFile(outputFileName, "RECREATE");
 
-    //RDataFrame and particle lines below
-    
     ROOT::RDataFrame df_base(chain);
     ROOT::RDF::RNode df = df_base;
 
-    //Beam and particle information, adjust for your data and particles
-    //Current beam energy is for RGA Sp19
+    //Fundamental particle constant
     const double El_mass = 0.000511;
     const double Mu_mass = 0.105658;
     const double Pro_mass = 0.938272088;
     const double Pip_mass = 0.140;
 
-    //Make your the particles in your dataset here!
-    //Particles are made with the constructor as seen below
-   
-    TString channel_name("epip(N)");
-    TString bending("inbending");
-
-    double mom_bin = .05;
-
-    double El_mom_low = 2;
-    double El_mom_high = 9;
-    bool El_phi_flag = true;
-
-    double Pip_mom_low = 0;
-    double Pip_mom_high = 10;
-    bool Pip_phi_flag = false;
-
-    const std::vector<int> six_sector = {1,2,3,4,5,6};
-    int El_detector = 2;
-    int Pip_detector = 3;
-
-    double dp_low = -.2;
-    double dp_high = .2;
-    double dp_bin_width = .02;
-
-    //Define your phi shift. I pulled this from Richard's code. Good luck.
-    //Variables passed in need to be phi, momentum, sector. Otherwise code can't call them correctly.
-    auto El_compute_local_phi  = [](double ElPhi, float El, int esec) {
-    	double localPhi = ElPhi - (esec - 1) * 60;
-    	return localPhi - (30 / El);
-    };
-
-    //Determine what your phi bins are
-    double El_phi_divider = 5;
-    auto El_phi_binning = [El_phi_divider](double localPhi) {
-	if(localPhi <= -El_phi_divider){ return 1; }
-	else if(-El_phi_divider < localPhi && localPhi <= El_phi_divider){ return 2; }
-	else { return 3; }
-    };
-
-    std::unordered_map<int, std::string> El_phi_bin_map = {{1, "negative"}, {2, "neutral"}, {3,"positive"}};
-
-    MomCorrParticle Electron("El", El_mass, "ex", "ey", "ez", "esec", El_detector, six_sector, El_mom_low, El_mom_high, mom_bin, PhiHandling::CLAS12_FD_Standard, true);
-    MomCorrParticle Pip("Pip", Pip_mass, "pipx", "pipy", "pipz", "pipsec", Pip_detector, six_sector, Pip_mom_low, Pip_mom_high, mom_bin, PhiHandling::CLAS12_CD_Standard, false);
-
-    std::vector<MomCorrParticle> particle_list = {Electron, Pip};
+    std::vector<MomCorrParticle> particle_list = config.BuildParticles();
 
     std::vector<std::string> momentum_columns;
     //Main logic loop for creating histograms

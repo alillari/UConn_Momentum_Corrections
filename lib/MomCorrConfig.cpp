@@ -1,7 +1,8 @@
 #include "MomCorrConfig.h"
 #include <string>
+#include <vector>
 #include <fstream>
-#include <MomCorrParticles.h>
+#include <MomCorrParticle.h>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -23,6 +24,8 @@ void MomCorrConfig::LoadJSON(const std::string& filename)
     json j;
     f >> j;
 
+    storedJSON_ = j;
+
     experiment_ = j.at("analysis").at("experiment").get<std::string>();
     specifier_ = j.at("analysis").at("specifier").get<std::string>();
     beamEnergy_ = j.at("analysis").at("beam_energy").get<double>();
@@ -41,7 +44,10 @@ void MomCorrConfig::LoadJSON(const std::string& filename)
 }
 
 //Getters
-double MomCorrConfig::GetBeamEnergy() const {return beamEnergy_;}
+
+json MomCorrConfig::GetStoredJSON() const { return storedJSON_;}
+
+double MomCorrConfig::GetBeamEnergy() const { return beamEnergy_;}
 
 double MomCorrConfig::GetMissingMassLow() const { return mmLow_;}
 double MomCorrConfig::GetMissingMassHigh() const { return mmHigh_;} 
@@ -56,14 +62,15 @@ double MomCorrConfig::GetDefaultMomentumBin() const { return defaultMomBin_;}
 std::string MomCorrConfig::GetSpecifier() const { return specifier_;}
 std::string MomCorrConfig::GetBending() const { return bending_;}
 std::string MomCorrConfig::GetChannel() const { return channel_;}
+std::string MomCorrConfig::GetExperiment() const { return experiment_;}
 
 std::vector<MomCorrParticle> MomCorrConfig::BuildParticles() const {
 
-	std::vector<MomCOrrParticle> created_particles;
-	const auto& particles = j.at("particles");
+	std::vector<MomCorrParticle> created_particles;
+	const auto& particles = storedJSON_.at("particles");
 
 	for(const auto& p: particles){
-		MomCorrParticle new_particle(p.at("name"), p.at("mass"), p.at(), "ey", "ez", "esec", El_detector, six_sector, El_mom_low, El_mom_high, mom_bin, PhiHandling::CLAS12_FD_Standard, true);
+		MomCorrParticle new_particle(p.at("name"), p.at("mass"), p.at("px"), p.at("py"), p.at("pz"), p.at("sector_branch"), p.at("detector"), p.at("sectors"), p.at("momentum").at("min"), p.at("momentum").at("max"), p.at("momentum").at("bin_width"), p.at("phi").at("handling"), p.at("phi").at("enabled"));
 		created_particles.push_back(new_particle);
 	}
 	return created_particles;
