@@ -1,0 +1,65 @@
+{
+  "analysis": {
+    "experiment": "CLAS12",
+    "beam_energy": 10.1998,
+    "missing_mass": {
+      "min": 0.8,
+      "max": 1.2,
+      "bin_width": 0.005
+    },
+    "dp": {
+      "min": -0.2,
+      "max": 0.2,
+      "bin_width": 0.02
+    },
+    "channel": "epip(N)",
+    "bending": "inbending",
+    "specifiers": "CLAS12_CD_RGA_Sp19_In_pip"  
+  },
+
+  "particles": [
+    {
+      "name": "El",
+      "mass": 0.000511,
+      "px": "ex",
+      "py": "ey",
+      "pz": "ez",
+      "sector_branch": "esec",
+      "detector": 2,
+      "sectors": [1, 2, 3, 4, 5, 6],
+
+      "momentum": {
+        "min": 2.0,
+        "max": 9.0,
+        "bin_width": 0.05
+      },
+
+      "phi": {
+        "enabled": true,
+        "handling": "CLAS12_FD_Standard"
+      }
+    },
+
+    {
+      "name": "Pip",
+      "mass": 0.140,
+      "px": "pipx",
+      "py": "pipy",
+      "pz": "pipz",
+      "sector_branch": "pipsec",
+      "detector": 3,
+      "sectors": [1, 2, 3, 4, 5, 6],
+
+      "momentum": {
+        "min": 0.0,
+        "max": 10.0,
+        "bin_width": 0.05
+      },
+
+      "phi": {
+        "enabled": false,
+        "handling": "CLAS12_CD_Standard"
+      }
+    }
+  ]
+}

@@ -19,15 +19,16 @@
 
 #include <MomCorrParticle.h>
 #include <ComputeMissingMassHelper.h>
+#include <MomCorrConfig.h>
 
 int main(int argc, char* argv[]){
     ROOT::EnableImplicitMT();
 
     //Logic for correct usage of command
 
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <directory/path/> <num_files | all>\n";
-        return 1;
+    if (argc < 4) {
+    	std::cerr << "Usage: " << argv[0] << " <directory/path/> <num_files | all> <config.json>\n";
+    	return 1;
     }
 
     TString pathPattern = argv[1];
@@ -64,15 +65,25 @@ int main(int argc, char* argv[]){
         }
     }
 
+    //Add logic for checking if the last input is actually a JSON file
+	
+    std::string configFile = argv[3];
+    MomCorrConfig config(configFile);
+
     TChain chain("h22");  // TTree name is "h22", change as needed
     for (int i = 0; i < numFilesToProcess; ++i) {
         chain.Add(rootFiles[i]);
     } 
 
-    //Specify all the information you feel is necessary to recognize your root file, I recommend DETECTOR_SUBSYSTEM_RUNGROUP_RUNPERIOD_MAGNET_PARTICLE
-    //If you're not doing CLAS12, make your own specifier
-    //This is just for your own book-keeping, change it as required or to taste :)
-    //Change dataOutLocation to your heart's content, just make sure you know where it is and run the enviromental sh script with the correct location
+    const double beam_energy = config.GetBeamEnergy();
+
+    const double missing_mass_low  = config.GetMissingMassMin();
+    const double missing_mass_high = config.GetMissingMassMax();
+    const double missing_mass_width = config.GetMissingMassBinWidth();
+    
+    const double dp_low = -.2;
+    const double dp_high = .2;
+    const double dp_bin_width = .02;
 
     TString specifiers = "CLAS12_CD_RGA_Sp19_In_pip";
     TString dataOutLocation = "../analysis_out/" + specifiers + "/";
@@ -86,8 +97,8 @@ int main(int argc, char* argv[]){
 
     //Beam and particle information, adjust for your data and particles
     //Current beam energy is for RGA Sp19
-    const double beam_energy = 10.1998;
     const double El_mass = 0.000511;
+    const double Mu_mass = 0.105658;
     const double Pro_mass = 0.938272088;
     const double Pip_mass = 0.140;
 
@@ -96,10 +107,6 @@ int main(int argc, char* argv[]){
    
     TString channel_name("epip(N)");
     TString bending("inbending");
-
-    double missing_mass_low = .8;
-    double missing_mass_high = 1.2;
-    double missing_mass_width = .005;
 
     double mom_bin = .05;
 

@@ -1,6 +1,7 @@
 #include "MomCorrConfig.h"
 #include <string>
 #include <fstream>
+#include <MomCorrParticles.h>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -22,18 +23,19 @@ void MomCorrConfig::LoadJSON(const std::string& filename)
     json j;
     f >> j;
 
-    specifier_ = j.at("dataset").at("specifier").get<std::string>();
-    beamEnergy_ = j.at("dataset").at("beam_energy").get<double>();
-    bending_ = j.at("dataset").at("bending").get<std::string>();
-    channel_ = j.at("dataset").at("channel").get<std::string>();
+    experiment_ = j.at("analysis").at("experiment").get<std::string>();
+    specifier_ = j.at("analysis").at("specifier").get<std::string>();
+    beamEnergy_ = j.at("analysis").at("beam_energy").get<double>();
+    bending_ = j.at("analysis").at("bending").get<std::string>();
+    channel_ = j.at("analysis").at("channel").get<std::string>();
 
-    mmLow_ = j.at("missing_mass").at("low").get<double>();
-    mmHigh_ = j.at("missing_mass").at("high").get<double>();
-    mmBin_ = j.at("missing_mass").at("bin_width").get<double>();
+    mmLow_ = j.at("analysis").at("missing_mass").at("low").get<double>();
+    mmHigh_ = j.at("analysis").at("missing_mass").at("high").get<double>();
+    mmBin_ = j.at("analysis").at("missing_mass").at("bin_width").get<double>();
 
-    dpLow_ = j.at("momentum_correction").at("dp_low").get<double>();
-    dpHigh_ = j.at("momentum_correction").at("dp_high").get<double>();
-    dpBin_ = j.at("momentum_correction").at("dp_bin_width").get<double>();
+    dpLow_ = j.at("analysis").at("dp").at("dp_low").get<double>();
+    dpHigh_ = j.at("analysis").at("dp").at("dp_high").get<double>();
+    dpBin_ = j.at("analysis").at("dp").at("dp_bin_width").get<double>();
 
     defaultMomBin_ = j.at("defaults").at("momentum_bin").get<double>();
 }
@@ -54,3 +56,15 @@ double MomCorrConfig::GetDefaultMomentumBin() const { return defaultMomBin_;}
 std::string MomCorrConfig::GetSpecifier() const { return specifier_;}
 std::string MomCorrConfig::GetBending() const { return bending_;}
 std::string MomCorrConfig::GetChannel() const { return channel_;}
+
+std::vector<MomCorrParticle> MomCorrConfig::BuildParticles() const {
+
+	std::vector<MomCOrrParticle> created_particles;
+	const auto& particles = j.at("particles");
+
+	for(const auto& p: particles){
+		MomCorrParticle new_particle(p.at("name"), p.at("mass"), p.at(), "ey", "ez", "esec", El_detector, six_sector, El_mom_low, El_mom_high, mom_bin, PhiHandling::CLAS12_FD_Standard, true);
+		created_particles.push_back(new_particle);
+	}
+	return created_particles;
+}
