@@ -36,11 +36,11 @@ void MomCorrConfig::LoadJSON(const std::string& filename)
     mmHigh_ = j.at("analysis").at("missing_mass").at("high").get<double>();
     mmBin_ = j.at("analysis").at("missing_mass").at("bin_width").get<double>();
 
-    dpLow_ = j.at("analysis").at("dp").at("dp_low").get<double>();
-    dpHigh_ = j.at("analysis").at("dp").at("dp_high").get<double>();
-    dpBin_ = j.at("analysis").at("dp").at("dp_bin_width").get<double>();
+    dpLow_ = j.at("analysis").at("dp").at("low").get<double>();
+    dpHigh_ = j.at("analysis").at("dp").at("high").get<double>();
+    dpBin_ = j.at("analysis").at("dp").at("bin_width").get<double>();
 
-    defaultMomBin_ = j.at("defaults").at("momentum_bin").get<double>();
+    defaultMomBin_ = j.at("analysis").at("momentum_bin").get<double>();
 }
 
 //Getters
@@ -64,13 +64,25 @@ std::string MomCorrConfig::GetBending() const { return bending_;}
 std::string MomCorrConfig::GetChannel() const { return channel_;}
 std::string MomCorrConfig::GetExperiment() const { return experiment_;}
 
+inline PhiHandling PhiHandlingFromString(const std::string& input) {
+
+    if (input == "None") return PhiHandling::None;
+    if (input == "CLAS12_CD_Standard") return PhiHandling::CLAS12_CD_Standard;
+    if (input == "CLAS12_FD_Standard") return PhiHandling::CLAS12_FD_Standard;
+    else return PhiHandling::None;
+
+}
+
+
 std::vector<MomCorrParticle> MomCorrConfig::BuildParticles() const {
 
 	std::vector<MomCorrParticle> created_particles;
 	const auto& particles = storedJSON_.at("particles");
 
 	for(const auto& p: particles){
-		MomCorrParticle new_particle(p.at("name"), p.at("mass"), p.at("px"), p.at("py"), p.at("pz"), p.at("sector_branch"), p.at("detector"), p.at("sectors"), p.at("momentum").at("min"), p.at("momentum").at("max"), p.at("momentum").at("bin_width"), p.at("phi").at("handling"), p.at("phi").at("enabled"));
+		PhiHandling phiMode = PhiHandlingFromString(p.at("phi").at("handling").get<std::string>());
+		
+		MomCorrParticle new_particle(p.at("name").get<std::string>(), p.at("mass").get<double>(), p.at("px").get<std::string>(), p.at("py").get<std::string>(), p.at("pz").get<std::string>(), p.at("sector_branch").get<std::string>(), p.at("detector").get<double>(), p.at("sectors").get<std::vector<int>>(), p.at("momentum").at("low").get<double>(), p.at("momentum").at("high").get<double>(), p.at("momentum").at("bin_width").get<double>(), phiMode, p.at("phi").at("enabled").get<bool>());
 		created_particles.push_back(new_particle);
 	}
 	return created_particles;

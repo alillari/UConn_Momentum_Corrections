@@ -79,15 +79,15 @@ int main(int argc, char* argv[]){
     const double beam_energy = config.GetBeamEnergy();
     const TString channel_name = config.GetChannel();
     const TString bending = config.GetBending();
-    const TString specifiers = config.GetSpecifiers();
+    const TString specifiers = config.GetSpecifier();
 
     const double mom_bin = config.GetDefaultMomentumBin();
 
-    const double missing_mass_low  = config.GetMissingMassMin();
-    const double missing_mass_high = config.GetMissingMassMax();
+    const double missing_mass_low  = config.GetMissingMassLow();
+    const double missing_mass_high = config.GetMissingMassHigh();
     const double missing_mass_width = config.GetMissingMassBinWidth();
     
-    const double dp_low = config.GetDpMin();
+    const double dp_low = config.GetDpLow();
     const double dp_high = config.GetDpHigh();
     const double dp_bin_width = config.GetDpBinWidth();
 

@@ -3,18 +3,19 @@
     "experiment": "CLAS12",
     "beam_energy": 10.1998,
     "missing_mass": {
-      "min": 0.8,
-      "max": 1.2,
+      "low": 0.8,
+      "high": 1.2,
       "bin_width": 0.005
     },
     "dp": {
-      "min": -0.2,
-      "max": 0.2,
+      "low": -0.2,
+      "high": 0.2,
       "bin_width": 0.02
     },
     "channel": "epip(N)",
     "bending": "inbending",
-    "specifiers": "CLAS12_CD_RGA_Sp19_In_pip"  
+    "specifier": "CLAS12_CD_RGA_Sp19_In_pip",  
+    "momentum_bin": 0.05 
   },
 
   "particles": [
@@ -29,8 +30,8 @@
       "sectors": [1, 2, 3, 4, 5, 6],
 
       "momentum": {
-        "min": 2.0,
-        "max": 9.0,
+        "low": 2.0,
+        "high": 9.0,
         "bin_width": 0.05
       },
 
@@ -51,8 +52,8 @@
       "sectors": [1, 2, 3, 4, 5, 6],
 
       "momentum": {
-        "min": 0.0,
-        "max": 10.0,
+        "low": 0.0,
+        "high": 10.0,
         "bin_width": 0.05
       },
 
