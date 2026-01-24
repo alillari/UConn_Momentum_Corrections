@@ -10,6 +10,7 @@
 
 //Units in GeV
 constexpr double ELECTRON_MASS = 0.000511;
+constexpr double MUON_MASS = 0.105658;
 constexpr double PROTON_MASS = 0.938272;
 constexpr double PIP_MASS = 0.13957;
 constexpr double NEUTRON_MASS = 0.939565;
@@ -121,9 +122,5 @@ double findTruePionMom(const ROOT::Math::PxPyPzMVector &beam,
 		return soln2;
 	}
 }
-
-//inline T defineDP(T& df, const std::vector<MomCorrParticle>& particle_list, double beam_energy) {
-//
-//}
 #endif  // MISSING_MASS_HELPER_H
 
