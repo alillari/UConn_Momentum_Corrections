@@ -4,10 +4,13 @@
 #include <Math/Vector4D.h>
 
 // ep → eπ⁺n
+
+
+
 double SolveTruePionMomentum_epToEpiN(const ROOT::Math::PxPyPzMVector &beam, const ROOT::Math::PxPyPzMVector &target, const ROOT::Math::PxPyPzMVector &scattered, const ROOT::Math::PxPyPzMVector &reconPip) {
 
         ROOT::Math::PxPyPzMVector known = beam + target - scattered;
-        double cosTheta = known.Dot(reconPip) / (known.R() + reconPip.R());
+	double cosTheta = known.Vect().Dot(reconPip.Vect()) / (known.P() * reconPip.P());
 
         //We assume the direction is along the measured direction, but magnitude is adjustable
         //Calculated using conservation of 4 momentum
@@ -24,11 +27,11 @@ double SolveTruePionMomentum_epToEpiN(const ROOT::Math::PxPyPzMVector &beam, con
         double soln1 = (-beta + std::sqrt(beta*beta - 4*alpha*gamma))/(2*alpha);
         double soln2 = (-beta - std::sqrt(beta*beta - 4*alpha*gamma))/(2*alpha);
 
-        if(soln1 - reconPip.P() < soln2 - reconPip.P()){
-                return soln1;
-        } else {
-                return soln2;
-        }
+	if (std::abs(soln1 - reconPip.P()) < std::abs(soln2 - reconPip.P()))
+    		return soln1;
+	else
+    		return soln2;
+
 }
 
 #endif

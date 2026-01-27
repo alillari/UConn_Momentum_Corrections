@@ -8,6 +8,8 @@
 constexpr double ELECTRON_MASS = 0.000511;
 constexpr double MUON_MASS = .10;
 constexpr double PROTON_MASS  = 0.938272;
+constexpr double NEUTRON_MASS = 0.9395654;
+constexpr double PIP_MASS = .139570;
 
 inline double ComputeMissingMass(const std::vector<ROOT::Math::PxPyPzMVector>& detected, double beam_energy) {
     ROOT::Math::PxPyPzMVector beam(0, 0, std::sqrt(beam_energy*beam_energy - ELECTRON_MASS*ELECTRON_MASS), ELECTRON_MASS);

@@ -29,6 +29,7 @@ double MomCorrParticle::GetMass() const { return mass_; }
 std::string MomCorrParticle::GetPxBranch() const { return pxBranch_; }
 std::string MomCorrParticle::GetPyBranch() const { return pyBranch_; }
 std::string MomCorrParticle::GetPzBranch() const { return pzBranch_; }
+std::vector<std::string> MomCorrParticle::GetPBranches() const { return {pxBranch_, pyBranch_, pzBranch_};}
 std::string MomCorrParticle::GetSectorBranch() const { return name_ + "_sec"; }
 const std::vector<int>& MomCorrParticle::GetSectors() const { return sectors_; }
 int MomCorrParticle::GetDetector() const { return detector_; }

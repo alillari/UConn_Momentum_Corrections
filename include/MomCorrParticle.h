@@ -35,6 +35,7 @@ public:
     std::string GetPxBranch() const;
     std::string GetPyBranch() const;
     std::string GetPzBranch() const;
+    std::vector<std::string> GetPBranches() const;
     std::string GetSectorBranch() const;
     int GetDetector() const;
     const std::vector<int>& GetSectors() const;

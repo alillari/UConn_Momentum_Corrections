@@ -18,8 +18,12 @@
 #include <filesystem>
 
 #include <MomCorrParticle.h>
-#include <ComputeMissingMassHelper.h>
 #include <MomCorrConfig.h>
+
+//#include <ComputeMissingMassHelper.h>
+#include <Kinematics.h>
+#include <ExclusiveKinematics.h>
+#include <MissingMassRDF.h>
 
 int main(int argc, char* argv[]){
     ROOT::EnableImplicitMT();
