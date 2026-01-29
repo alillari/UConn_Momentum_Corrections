@@ -69,14 +69,12 @@ PeakFitter::PeakGuess PeakFitter::guessPeak(TH1* h) const {
 }
 
 FitResult PeakFitter::tryModel(TH1* h, PeakGuess guess, int order) const {
-    FitResult result;
 
-    //TODO: determine how fits should be named
-    TF1* f = makeTF1(...);
+    TF1* f = model.makeTF1(cfg_.name, cfg_.xmin, cfg_.xmax);
 
-    //TODO: Figure out how to set initial parameters
+    PeakGuess peak_attempt = guessPeak(h);
 
-
+    model.setParameters();
 
     int status = h->Fit(f, "QNR");
 
@@ -85,8 +83,7 @@ FitResult PeakFitter::tryModel(TH1* h, PeakGuess guess, int order) const {
         return result;
     }
 
-    //TODO: Figure out how to extract the correct parameters
-
+    FirResult result = getParameters(f);
 
     //TODO: Apply guardrails?
 

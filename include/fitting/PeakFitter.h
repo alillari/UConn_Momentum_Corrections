@@ -6,6 +6,12 @@
 
 class TH1;
 
+struct PeakGuess {
+        double mean;
+        double sigma;
+        double amplitude;
+};
+
 class PeakFitter {
 public:
     explicit PeakFitter(const FitConfig& cfg);
@@ -15,6 +21,6 @@ public:
 private:
     FitConfig cfg_;
 
-    PeakGuess guessPeak(TH1* h) const;	//I am going to keep this here as it doesn't care about if this peak is gaussian or not
+    PeakGuess guessPeak(TH1* h) const;
     FitResult tryModel(TH1* h, const PeakGuess& guess, int bg_order) const;
 };
