@@ -2,6 +2,7 @@
 
 #include "fitting/FitConfig.h"
 #include "fitting/FitResult.h"
+#include "fitting/FitModel.h"
 
 class TH1;
 
@@ -14,12 +15,6 @@ public:
 private:
     FitConfig cfg_;
 
-    struct PeakGuess {
-        double mean;
-        double sigma;
-        double amplitude;
-    };
-
-    PeakGuess guessPeak(TH1* h) const;
+    PeakGuess guessPeak(TH1* h) const;	//I am going to keep this here as it doesn't care about if this peak is gaussian or not
     FitResult tryModel(TH1* h, const PeakGuess& guess, int bg_order) const;
 };

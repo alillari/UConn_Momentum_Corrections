@@ -11,8 +11,7 @@ constexpr double MAX_SIGMA_FRACTION = 3.0;
 PeakFitter::PeakFitter(const FitConfig& cfg)
 : cfg_(cfg) {}
 
-PeakFitter::PeakGuess PeakFitter::guessPeak(TH1* h) const
-{
+PeakFitter::PeakGuess PeakFitter::guessPeak(TH1* h) const {
     PeakGuess g;
 
     // fallback defaults
@@ -69,9 +68,34 @@ PeakFitter::PeakGuess PeakFitter::guessPeak(TH1* h) const
     return g;
 }
 
+FitResult PeakFitter::tryModel(TH1* h, PeakGuess guess, int order) const {
+    FitResult result;
 
-FitResult PeakFitter::fit(TH1* h) const
-{
+    //TODO: determine how fits should be named
+    TF1* f = makeTF1(...);
+
+    //TODO: Figure out how to set initial parameters
+
+
+
+    int status = h->Fit(f, "QNR");
+
+    if (status != 0) {
+        delete f;
+        return result;
+    }
+
+    //TODO: Figure out how to extract the correct parameters
+
+
+    //TODO: Apply guardrails?
+
+    delete f;
+    return result;	
+
+}
+
+FitResult PeakFitter::fit(TH1* h) const {
     FitResult best;
     best.chi2_ndf = 1e9;
 
@@ -90,8 +114,6 @@ FitResult PeakFitter::fit(TH1* h) const
             best = r;
         }
     }
-
-    
 
     return best;
 }

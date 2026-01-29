@@ -9,6 +9,7 @@ struct FitResult {
     double mean = 0;
     double mean_err = 0;
     double sigma = 0;
+    double sigma_err = 0;
 
     double chi2_ndf = 0;
     bool suspicious = false;
