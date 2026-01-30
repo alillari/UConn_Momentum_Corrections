@@ -8,6 +8,7 @@ foreach(src ${ANALYSIS_SOURCES})
     # Link both your library and ROOT explicitly
     target_link_libraries(${exec_name} PRIVATE
         momcorr
+	fitting
         ROOT::Core
         ROOT::RIO
         ROOT::Tree

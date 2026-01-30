@@ -1,8 +1,14 @@
 #include "fitting/PeakFitter.h"
 #include "fitting/FitModel.h"
 
+#include <memory>
+#include <algorithm>
+#include <cmath>
+
 #include <TH1.h>
 #include <TF1.h>
+#include <TSpectrum.h>
+
 
 //Setting global limits of fit sigma
 constexpr double MIN_SIGMA_FRACTION = 0.3;
@@ -11,7 +17,7 @@ constexpr double MAX_SIGMA_FRACTION = 3.0;
 PeakFitter::PeakFitter(const FitConfig& cfg)
 : cfg_(cfg) {}
 
-PeakFitter::PeakGuess PeakFitter::guessPeak(TH1* h) const {
+PeakGuess PeakFitter::guessPeak(TH1* h) const {
     PeakGuess g;
 
     // fallback defaults
@@ -68,30 +74,24 @@ PeakFitter::PeakGuess PeakFitter::guessPeak(TH1* h) const {
     return g;
 }
 
-FitResult PeakFitter::tryModel(TH1* h, PeakGuess guess, int order) const {
+FitResult PeakFitter::tryModel(TH1* h, const PeakGuess& guess, int order) const {
 
     FitModel model(order);
-
     TF1* f = model.makeTF1(cfg_.name, cfg_.xmin, cfg_.xmax);
-
-    PeakGuess peak_attempt = guessPeak(h);
 
     model.setParameters(f, guess);
 
     int status = h->Fit(f, "QNR");
 
-    if (status != 0) {
-        delete f;
-        return result;
+    FitResult result;
+    result.success = (status == 0);
+
+    if (result.success) {
+        result = model.extractParameters(f);
     }
 
-    FirResult result = getParameters(f);
-
-    //TODO: Apply guardrails?
-
     delete f;
-    return result;	
-
+    return result;
 }
 
 FitResult PeakFitter::fit(TH1* h) const {

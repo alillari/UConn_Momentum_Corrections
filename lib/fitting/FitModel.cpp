@@ -1,4 +1,7 @@
 #include "fitting/FitModel.h"
+#include "fitting/FitResult.h"
+#include "fitting/PeakFitter.h"
+
 #include <TF1.h>
 #include <string>
 
@@ -12,7 +15,7 @@ TF1* FitModel::makeTF1(const std::string& name, double xmin, double xmax) const 
     return new TF1(name.c_str(), formula.c_str(), xmin, xmax);
 }
 
-void FitModel::setParameters(TF1* f, PeakGuess signal_guess) const {
+void FitModel::setParameters(TF1* f, const PeakGuess& signal_guess) const {
 	f->SetParameter(0, signal_guess.amplitude);
 	f->SetParameter(1, signal_guess.mean);
 	f->SetParameter(2, signal_guess.sigma);
@@ -28,7 +31,7 @@ FitResult FitModel::extractParameters(TF1* f) const {
 
 	FitResult result;
 
-	resultbg.bg_order = bg_order_;
+	result.bg_order = bg_order_;
 
 	result.mean = f->GetParameter(1);	
 	result.mean_err = f->GetParError(1);

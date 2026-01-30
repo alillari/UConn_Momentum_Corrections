@@ -2,9 +2,10 @@
 
 #include "fitting/FitConfig.h"
 #include "fitting/FitResult.h"
-#include "fitting/FitModel.h"
 
 class TH1;
+
+class FitModel;
 
 struct PeakGuess {
         double mean;

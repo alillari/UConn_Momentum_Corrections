@@ -13,7 +13,7 @@ public:
 
     int bgOrder() const { return bg_order_; }
 
-    void setParameters(TF1* f, PeakGuess signal_guess) const;
+    void setParameters(TF1* f, const PeakGuess& signal_guess) const;
 
     FitResult extractParameters(TF1* f) const;
 

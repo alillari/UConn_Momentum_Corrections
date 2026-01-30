@@ -1,3 +1,5 @@
+add_subdirectory(fitting)
+
 # Collect all .cc files in lib/
 file(GLOB LIB_SOURCES "*.cpp")
 
