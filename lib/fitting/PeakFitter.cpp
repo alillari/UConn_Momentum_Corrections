@@ -70,11 +70,13 @@ PeakFitter::PeakGuess PeakFitter::guessPeak(TH1* h) const {
 
 FitResult PeakFitter::tryModel(TH1* h, PeakGuess guess, int order) const {
 
+    FitModel model(order);
+
     TF1* f = model.makeTF1(cfg_.name, cfg_.xmin, cfg_.xmax);
 
     PeakGuess peak_attempt = guessPeak(h);
 
-    model.setParameters();
+    model.setParameters(f, guess);
 
     int status = h->Fit(f, "QNR");
 

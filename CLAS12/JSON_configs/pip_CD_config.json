@@ -13,6 +13,7 @@
       "bin_width": 0.02
     },
     "channel": "epip(N)",
+    "specific_particle": "pip",
     "bending": "inbending",
     "specifier": "CLAS12_CD_RGA_Sp19_In_pip",  
     "momentum_bin": 0.05 
