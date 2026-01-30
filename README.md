@@ -23,7 +23,7 @@ The design emphasizes **reusability**, **clear separation of responsibilities**,
 - `CLAS12/analysis/`  
   Analysis executables and scripts using the core library.
 
-- `CLAS12/JSON_configs/`
+- `CLAS12/JSON_configs/`  
   Temporary home for json files used as input to analysis files.
 
 - `CMakeLists.txt`  
