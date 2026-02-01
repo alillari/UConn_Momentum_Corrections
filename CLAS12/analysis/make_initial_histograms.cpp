@@ -2,6 +2,7 @@
 #include <TH1.h>
 #include <TH2.h>
 #include <TChain.h>
+#include <TTree.h>
 #include <TSystemDirectory.h>
 #include <TString.h>
 #include <TList.h>
@@ -16,11 +17,13 @@
 #include <iostream>
 #include <vector>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
 
 #include <MomCorrParticle.h>
 #include <MomCorrConfig.h>
 
-//#include <ComputeMissingMassHelper.h>
 #include <Kinematics.h>
 #include <ExclusiveKinematics.h>
 #include <MissingMassRDF.h>
@@ -98,6 +101,18 @@ int main(int argc, char* argv[]){
     TString dataOutLocation = "../analysis_out/" + specifiers + "/";
     TString outputFileName = dataOutLocation + specifiers + "_raw_histograms.root";
     TFile* outputFile = new TFile(outputFileName, "RECREATE");
+
+    //Storing JSON metadata inside the ROOT file so one doesn't need to keep track of the JSON files seperately from their output
+    TTree config_tree("config", "Analysis configuration");
+
+    std::ifstream in(configFile);
+    std::ostringstream ss;
+    ss << in.rdbuf();
+    std::string configs_string = ss.str();
+
+    config_tree.Branch("json", &configs_string);
+    config_tree.Fill();
+    config_tree.Write();
 
     ROOT::RDataFrame df_base(chain);
     ROOT::RDF::RNode df = df_base;
