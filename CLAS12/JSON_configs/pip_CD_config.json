@@ -37,7 +37,7 @@
 
       "phi": {
         "enabled": true,
-        "handling": "CLAS12_FD_Standard"
+        "handling": "CLAS12_FD_El_Standard"
       }
     },
 

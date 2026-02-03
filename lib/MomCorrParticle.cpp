@@ -43,7 +43,7 @@ bool MomCorrParticle::IsPhiBinningEnabled() const { return usePhiBinning_; }
 double MomCorrParticle::ComputeLocalPhi(double phi, double p, int sector) const
 {
     switch (phiHandling_) {
-        case PhiHandling::CLAS12_FD_Standard: {
+        case PhiHandling::CLAS12_FD_El_Standard: {
            // Richard/FX sector-dependent unwrapping
             if (((sector == 3 || sector == 4) && phi < 0.0) ||
                 (sector > 4 && phi < 90.0)) {
@@ -73,7 +73,7 @@ std::unordered_map<int, std::string> MomCorrParticle::GetPhiBinningLabels() cons
     switch (phiHandling_) {
 
 	//Inherited from Richard, 1 is less than -5 deg, 2 is between -5 and 5 deg, and 3 is larger than 5 deg
-        case PhiHandling::CLAS12_FD_Standard:
+        case PhiHandling::CLAS12_FD_El_Standard:
             return {
                 {1, "negative"},
                 {2, "neutral"},
@@ -95,7 +95,7 @@ std::unordered_map<int, std::string> MomCorrParticle::GetPhiBinningLabels() cons
 
 int MomCorrParticle::PhiBin(double localPhi) const {
     switch (phiHandling_) {
-    	case PhiHandling::CLAS12_FD_Standard:
+    	case PhiHandling::CLAS12_FD_El_Standard:
 	    if(localPhi > 5){ return 3;};
 	    if(localPhi <= -5){ return 1;}
 	    else{return 2;};

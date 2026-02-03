@@ -11,7 +11,7 @@
 enum class PhiHandling {
     None,
     CLAS12_CD_Standard,
-    CLAS12_FD_Standard
+    CLAS12_FD_El_Standard
 };
 
 class MomCorrParticle {

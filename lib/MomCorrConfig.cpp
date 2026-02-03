@@ -68,7 +68,7 @@ inline PhiHandling PhiHandlingFromString(const std::string& input) {
 
     if (input == "None") return PhiHandling::None;
     if (input == "CLAS12_CD_Standard") return PhiHandling::CLAS12_CD_Standard;
-    if (input == "CLAS12_FD_Standard") return PhiHandling::CLAS12_FD_Standard;
+    if (input == "CLAS12_FD_El_Standard") return PhiHandling::CLAS12_FD_El_Standard;
     else return PhiHandling::None;
 
 }
