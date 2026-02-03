@@ -44,8 +44,19 @@ double MomCorrParticle::ComputeLocalPhi(double phi, double p, int sector) const
 {
     switch (phiHandling_) {
         case PhiHandling::CLAS12_FD_Standard: {
+           // Richard/FX sector-dependent unwrapping
+            if (((sector == 3 || sector == 4) && phi < 0.0) ||
+                (sector > 4 && phi < 90.0)) {
+                phi += 360.0;
+            }
+
+            // Local sector φ
             double local = phi - (sector - 1) * 60.0;
-            return local - (30.0 / p);
+
+            // Momentum-dependent asymmetry correction
+            local -= 30.0 / p;
+
+            return local; 
         }
         case PhiHandling::None:
         default:
