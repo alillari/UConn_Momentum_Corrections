@@ -23,7 +23,7 @@ public:
                     const std::string& pyBranch,
                     const std::string& pzBranch,
                     const std::string& sectorBranch,
-                    const int detector,
+                    const std::string& detector,
                     const std::vector<int>& sectors,
                     double pMin, double pMax, double binWidth,
                     PhiHandling phiHandling,
@@ -37,7 +37,8 @@ public:
     std::string GetPzBranch() const;
     std::vector<std::string> GetPBranches() const;
     std::string GetSectorBranch() const;
-    int GetDetector() const;
+    std::string GetDetector() const;
+    int GetDetectorIDNum() const;
     const std::vector<int>& GetSectors() const;
 
     double GetMomentumMin() const;
@@ -68,7 +69,7 @@ private:
     std::string sectorBranch_;
 
     // Configuration
-    int detector_;
+    std::string detector_;
     std::vector<int> sectors_;
     double pMin_;
     double pMax_;

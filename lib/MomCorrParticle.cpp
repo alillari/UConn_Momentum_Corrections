@@ -14,7 +14,7 @@ MomCorrParticle::MomCorrParticle(const std::string& name,
                                  const std::string& pyBranch, 
                                  const std::string& pzBranch, 
                                  const std::string& sectorBranch, 
-                                 const int detector,
+                                 const std::string& detector,
 				 const std::vector<int>& sectors,
                                  double pMin, double pMax, double binWidth,
 				 PhiHandling phiHandling,
@@ -32,13 +32,20 @@ std::string MomCorrParticle::GetPzBranch() const { return pzBranch_; }
 std::vector<std::string> MomCorrParticle::GetPBranches() const { return {pxBranch_, pyBranch_, pzBranch_};}
 std::string MomCorrParticle::GetSectorBranch() const { return name_ + "_sec"; }
 const std::vector<int>& MomCorrParticle::GetSectors() const { return sectors_; }
-int MomCorrParticle::GetDetector() const { return detector_; }
+std::string MomCorrParticle::GetDetector() const { return detector_; }
 double MomCorrParticle::GetMomentumMin() const { return pMin_; }
 double MomCorrParticle::GetMomentumMax() const { return pMax_; }
 double MomCorrParticle::GetMomentumBinWidth() const { return binWidth_; }
 int MomCorrParticle::GetBins() const { return static_cast<int>(std::round((pMax_ - pMin_) / binWidth_)); }
 PhiHandling MomCorrParticle::GetPhiHandling() const { return phiHandling_; }
 bool MomCorrParticle::IsPhiBinningEnabled() const { return usePhiBinning_; }
+
+int MomCorrParticle::GetDetectorIDNum() const
+{
+	if(detector_ == "FD"){ return 2;}
+	if(detector_ == "CD"){ return 3;}
+	else{ return -1;}
+}
 
 double MomCorrParticle::ComputeLocalPhi(double phi, double p, int sector) const
 {

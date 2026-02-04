@@ -82,7 +82,7 @@ std::vector<MomCorrParticle> MomCorrConfig::BuildParticles() const {
 	for(const auto& p: particles){
 		PhiHandling phiMode = PhiHandlingFromString(p.at("phi").at("handling").get<std::string>());
 		
-		MomCorrParticle new_particle(p.at("name").get<std::string>(), p.at("mass").get<double>(), p.at("px").get<std::string>(), p.at("py").get<std::string>(), p.at("pz").get<std::string>(), p.at("sector_branch").get<std::string>(), p.at("detector").get<double>(), p.at("sectors").get<std::vector<int>>(), p.at("momentum").at("low").get<double>(), p.at("momentum").at("high").get<double>(), p.at("momentum").at("bin_width").get<double>(), phiMode, p.at("phi").at("enabled").get<bool>());
+		MomCorrParticle new_particle(p.at("name").get<std::string>(), p.at("mass").get<double>(), p.at("px").get<std::string>(), p.at("py").get<std::string>(), p.at("pz").get<std::string>(), p.at("sector_branch").get<std::string>(), p.at("detector").get<std::string>(), p.at("sectors").get<std::vector<int>>(), p.at("momentum").at("low").get<double>(), p.at("momentum").at("high").get<double>(), p.at("momentum").at("bin_width").get<double>(), phiMode, p.at("phi").at("enabled").get<bool>());
 		created_particles.push_back(new_particle);
 	}
 	return created_particles;
