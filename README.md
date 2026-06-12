@@ -41,11 +41,11 @@ cmake ..
 cmake --build .
 ```
 
-##Executables
+## Executables
 
 Executables are stored in CLAS12/executable/ .
 
-##Initial Histogram Production
+## Initial Histogram Production
 
 To make initial histograms, run as such:
 ```bash
