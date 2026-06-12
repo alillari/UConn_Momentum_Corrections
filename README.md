@@ -39,6 +39,7 @@ mkdir -p build
 cd build
 cmake ..
 cmake --build .
+```
 
 ##Executables
 
@@ -47,13 +48,14 @@ Executables are stored in CLAS12/executable/ .
 ##Initial Histogram Production
 
 To make initial histograms, run as such:
-
+```bash
 cd CLAS12/executable
 
 ./make_initial_histograms \
   /path/to/input/root/files \
   all \
   ../JSON_configs/pip_CD_config.json
+```
 
 changing the json file as needed.
 
