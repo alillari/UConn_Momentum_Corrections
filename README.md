@@ -29,6 +29,34 @@ The design emphasizes **reusability**, **clear separation of responsibilities**,
 - `CMakeLists.txt`  
   Build configuration for compiling libraries and analysis code.
 
+## Build
+
+This project uses CMake and expects ROOT to already be available in the environment.
+
+```bash
+cd UConn_Momentum_Corrections
+mkdir -p build
+cd build
+cmake ..
+cmake --build .
+
+##Executables
+
+Executables are stored in CLAS12/executable/ .
+
+##Initial Histogram Production
+
+To make initial histograms, run as such:
+
+cd CLAS12/executable
+
+./make_initial_histograms \
+  /path/to/input/root/files \
+  all \
+  ../JSON_configs/pip_CD_config.json
+
+changing the json file as needed.
+
 ## Design Philosophy
 
 - Each particle is represented by a single configurable object (e.g. `MomCorrParticle`)
