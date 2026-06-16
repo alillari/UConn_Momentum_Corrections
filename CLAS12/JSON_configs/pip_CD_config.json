@@ -1,6 +1,8 @@
 {
   "analysis": {
     "experiment": "CLAS12",
+    "run-group": "RGA",
+    "year": "Sp19",
     "beam_energy": 10.1998,
     "missing_mass": {
       "low": 0.8,
@@ -21,6 +23,7 @@
   "particles": [
     {
       "name": "El",
+      "pid": 11,
       "mass": 0.000511,
       "px": "ex",
       "py": "ey",
@@ -43,6 +46,7 @@
 
     {
       "name": "Pip",
+      "pid": 211,
       "mass": 0.140,
       "px": "pipx",
       "py": "pipy",

@@ -1,13 +1,12 @@
 #ifndef MOMCORRPARTICLE_H
 #define MOMCORRPARTICLE_H
 
+#include <ROOT/RDataFrame.hxx>
+
 #include <string>
 #include <vector>
 #include <unordered_map>
 
-#include <ROOT/RDataFrame.hxx>
-
-//Default PhiHandlings available
 enum class PhiHandling {
     None,
     CLAS12_CD_Standard,
@@ -16,27 +15,51 @@ enum class PhiHandling {
 
 class MomCorrParticle {
 public:
-    // Constructor
-    MomCorrParticle(const std::string& name,
-                    const double mass,
-                    const std::string& pxBranch,
-                    const std::string& pyBranch,
-                    const std::string& pzBranch,
-                    const std::string& sectorBranch,
-                    const std::string& detector,
-                    const std::vector<int>& sectors,
-                    double pMin, double pMax, double binWidth,
-                    PhiHandling phiHandling,
-                    bool usePhiBinning);
+    MomCorrParticle(
+        const std::string& name,
+        int pid,
+        double mass,
+        const std::string& pxBranch,
+        const std::string& pyBranch,
+        const std::string& pzBranch,
+        const std::string& sectorBranch,
+        const std::string& detector,
+        const std::vector<int>& sectors,
+        double pMin,
+        double pMax,
+        double binWidth,
+        PhiHandling phiHandling,
+        bool usePhiBinning
+    );
 
-    // Getters
+    // Physics identity
     std::string GetName() const;
+    int GetPID() const;
     double GetMass() const;
+
+    // Input tree branches from JSON
+    std::string GetInputPxBranch() const;
+    std::string GetInputPyBranch() const;
+    std::string GetInputPzBranch() const;
+    std::string GetInputSectorBranch() const;
+    std::vector<std::string> GetInputPBranches() const;
+
+    // Backward-compatible aliases
     std::string GetPxBranch() const;
     std::string GetPyBranch() const;
     std::string GetPzBranch() const;
-    std::vector<std::string> GetPBranches() const;
     std::string GetSectorBranch() const;
+    std::vector<std::string> GetPBranches() const;
+
+    // Derived RDataFrame branches
+    std::string GetDerivedSectorBranch() const;
+    std::string GetMagBranch() const;
+    std::string GetThetaBranch() const;
+    std::string GetPhiBranch() const;
+    std::string GetLocalPhiBranch() const;
+    std::string GetPhiBinBranch() const;
+
+    // Detector/config
     std::string GetDetector() const;
     int GetDetectorIDNum() const;
     const std::vector<int>& GetSectors() const;
@@ -49,35 +72,31 @@ public:
     PhiHandling GetPhiHandling() const;
     bool IsPhiBinningEnabled() const;
 
-    // Phi-related helpers
     double ComputeLocalPhi(double phi, double p, int sector) const;
     int PhiBin(double localPhi) const;
     std::unordered_map<int, std::string> GetPhiBinningLabels() const;
 
-    // RDataFrame interface
     ROOT::RDF::RNode AddBranches(ROOT::RDF::RNode df) const;
 
 private:
-    // Identity
     std::string name_;
+    int pid_;
     double mass_;
 
-    // Input branches
     std::string pxBranch_;
     std::string pyBranch_;
     std::string pzBranch_;
     std::string sectorBranch_;
 
-    // Configuration
     std::string detector_;
     std::vector<int> sectors_;
+
     double pMin_;
     double pMax_;
     double binWidth_;
 
-    // Phi handling
     PhiHandling phiHandling_;
     bool usePhiBinning_;
 };
 
-#endif // MOMCORRPARTICLE_H
+#endif

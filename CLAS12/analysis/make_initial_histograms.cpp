@@ -4,6 +4,7 @@
 #include <TChain.h>
 #include <TTree.h>
 #include <TSystemDirectory.h>
+#include <TSystemFile.h>
 #include <TString.h>
 #include <TList.h>
 #include <TFile.h>
@@ -20,6 +21,7 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <cstring>
 
 #include <MomCorrParticle.h>
 #include <MomCorrConfig.h>
@@ -27,84 +29,100 @@
 #include <Kinematics.h>
 #include <ExclusiveKinematics.h>
 #include <MissingMassRDF.h>
+#include <DeltaPRDF.h>
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[]) {
     ROOT::EnableImplicitMT();
 
-    //Logic for correct usage of command
-
     if (argc < 4) {
-    	std::cerr << "Usage: " << argv[0] << " <directory/path/> <num_files | all> <config.json>\n";
-    	return 1;
+        std::cerr << "Usage: " << argv[0]
+                  << " <directory/path/> <num_files | all> <config.json>\n";
+        return 1;
     }
 
     TString pathPattern = argv[1];
-    
+
     TSystemDirectory dir("inputDir", pathPattern);
     TList* files = dir.GetListOfFiles();
+
+    if (!files) {
+        std::cerr << "Could not list files in directory: " << pathPattern << "\n";
+        return 1;
+    }
 
     std::vector<TString> rootFiles;
     TIter next(files);
     TSystemFile* file;
 
-    while ((file = (TSystemFile*)next())) {
-    	TString fname = file->GetName();
-    	if (!file->IsDirectory() && fname.EndsWith(".root")) {
-        	rootFiles.push_back(
-            	pathPattern + "/" + fname
-        	);
-    	}
+    while ((file = static_cast<TSystemFile*>(next()))) {
+        TString fname = file->GetName();
+        if (!file->IsDirectory() && fname.EndsWith(".root")) {
+            rootFiles.push_back(pathPattern + "/" + fname);
+        }
     }
-    
+
     if (rootFiles.empty()) {
-        std::cerr << "No ROOT files found matching pattern: " << pathPattern << "\n";
+        std::cerr << "No ROOT files found in directory: " << pathPattern << "\n";
         return 1;
     }
 
     int numFilesToProcess = 0;
+
     if (TString(argv[2]) == "all") {
         numFilesToProcess = rootFiles.size();
     } else {
         numFilesToProcess = std::stoi(argv[2]);
-        if (numFilesToProcess <= 0 || numFilesToProcess > static_cast<int>(rootFiles.size())) {
+
+        if (numFilesToProcess <= 0 ||
+            numFilesToProcess > static_cast<int>(rootFiles.size())) {
             std::cerr << "Invalid number of files requested.\n";
             return 1;
         }
     }
 
-    //TODO: Add logic for checking if the last input is actually a JSON file
-	
     std::string configFile = argv[3];
     MomCorrConfig config(configFile);
 
-    TChain chain("h22");  // TTree name is "h22", change as needed
-			  // h22 is the default TTree name for the UConn group, for some reason
+    TChain chain("h22");
+
     for (int i = 0; i < numFilesToProcess; ++i) {
         chain.Add(rootFiles[i]);
-    } 
+    }
 
     const double beam_energy = config.GetBeamEnergy();
     const TString channel_name = config.GetChannel();
     const TString bending = config.GetBending();
     const TString specifiers = config.GetSpecifier();
 
-    const double mom_bin = config.GetDefaultMomentumBin();
-
-    const double missing_mass_low  = config.GetMissingMassLow();
+    const double missing_mass_low = config.GetMissingMassLow();
     const double missing_mass_high = config.GetMissingMassHigh();
     const double missing_mass_width = config.GetMissingMassBinWidth();
-    
+
     const double dp_low = config.GetDpLow();
     const double dp_high = config.GetDpHigh();
     const double dp_bin_width = config.GetDpBinWidth();
 
+    const int missing_mass_bins =
+        static_cast<int>((missing_mass_high - missing_mass_low) / missing_mass_width);
+
+    const int dp_bins =
+        static_cast<int>((dp_high - dp_low) / dp_bin_width);
+
     TString dataOutLocation = "../analysis_out/" + specifiers + "/";
-    TString outputFileName = dataOutLocation + specifiers + "_raw_histograms.root";
+    gSystem->mkdir(dataOutLocation, true);
+
+    TString outputFileName =
+        dataOutLocation + specifiers + "_raw_histograms.root";
+
     TFile* outputFile = new TFile(outputFileName, "RECREATE");
 
-    //Storing JSON metadata inside the ROOT file so one doesn't need to keep track of the JSON files seperately from their output
+    if (!outputFile || outputFile->IsZombie()) {
+        std::cerr << "Could not create output file: " << outputFileName << "\n";
+        return 1;
+    }
+
     TTree config_tree("config", "Analysis configuration");
-    
+
     std::ifstream in(configFile);
     std::ostringstream ss;
     ss << in.rdbuf();
@@ -114,7 +132,6 @@ int main(int argc, char* argv[]){
     config_tree.Fill();
     config_tree.Write();
 
-    //Storing histogram metadata
     TTree* meta = new TTree("hist_meta", "Histogram metadata");
 
     int hist_id;
@@ -126,7 +143,7 @@ int main(int argc, char* argv[]){
     char meta_detector[16];
 
     char x_var[32];
-    
+
     int x_bins;
     double x_min;
     double x_max;
@@ -160,136 +177,276 @@ int main(int argc, char* argv[]){
 
     meta->Branch("hist_name", meta_hist_name, "hist_name/C");
 
+    int unique_hist_id = 0;
+
+    auto FillMeta = [&](int sector,
+                        int phi_binning,
+                        int phi_bin,
+                        const MomCorrParticle& particle,
+                        const std::string& xv,
+                        int xb,
+                        double xmin,
+                        double xmax,
+                        const std::string& yv,
+                        int yb,
+                        double ymin,
+                        double ymax,
+                        const std::string& hist_name) {
+        hist_id = unique_hist_id;
+        meta_sector = sector;
+        is_phi_binning = phi_binning;
+        meta_phi_bin = phi_bin;
+
+        std::strncpy(meta_particle, particle.GetName().c_str(), sizeof(meta_particle));
+        meta_particle[sizeof(meta_particle) - 1] = '\0';
+
+        std::strncpy(meta_detector, particle.GetDetector().c_str(), sizeof(meta_detector));
+        meta_detector[sizeof(meta_detector) - 1] = '\0';
+
+        std::strncpy(x_var, xv.c_str(), sizeof(x_var));
+        x_var[sizeof(x_var) - 1] = '\0';
+
+        x_bins = xb;
+        x_min = xmin;
+        x_max = xmax;
+
+        std::strncpy(y_var, yv.c_str(), sizeof(y_var));
+        y_var[sizeof(y_var) - 1] = '\0';
+
+        y_bins = yb;
+        y_min = ymin;
+        y_max = ymax;
+
+        std::strncpy(meta_hist_name, hist_name.c_str(), sizeof(meta_hist_name));
+        meta_hist_name[sizeof(meta_hist_name) - 1] = '\0';
+
+        meta->Fill();
+    };
+
     ROOT::RDataFrame df_base(chain);
     ROOT::RDF::RNode df = df_base;
 
-    //Fundamental particle constant
-    const double El_mass = 0.000511;
-    const double Mu_mass = 0.105658;
-    const double Pro_mass = 0.938272088;
-    const double Pip_mass = 0.140;
-
     std::vector<MomCorrParticle> particle_list = config.BuildParticles();
 
-    std::vector<std::string> momentum_columns;
-    //Main logic loop for creating histograms
-    for(auto& particle: particle_list){
-    	df = particle.AddBranches(df);
+    for (const auto& particle : particle_list) {
+        df = particle.AddBranches(df);
     }
 
     df = DefineMissingMass(df, particle_list, beam_energy);
-    //df = DefineDP(df, particle_list, beam_energy);
-
-    int unique_hist_id = 0;
+    df = momcorr::DefineDeltaP_epipN(df, particle_list, beam_energy);
 
     for (const auto& particle : particle_list) {
-    	std::string mom_branch = particle.GetName() + "_mag";
-    	std::string sector_branch = particle.GetSectorBranch();
+        const std::string mom_branch = particle.GetMagBranch();
+        const std::string sector_branch = particle.GetSectorBranch();
 
-    	double mom_low = particle.GetMomentumMin();
-    	double mom_high = particle.GetMomentumMax();
-    	double mom_bin_width = particle.GetMomentumBinWidth();
-    	int mom_bins = static_cast<int>((mom_high - mom_low) / mom_bin_width);
+        const double mom_low = particle.GetMomentumMin();
+        const double mom_high = particle.GetMomentumMax();
+        const double mom_bin_width = particle.GetMomentumBinWidth();
 
-    	int missing_mass_bins = static_cast<int>((missing_mass_high - missing_mass_low) / missing_mass_width);
+        const int mom_bins =
+            static_cast<int>((mom_high - mom_low) / mom_bin_width);
 
-    	for (int sector : particle.GetSectors()) {
-    	    // Filter the dataframe for the current sector
-    	    auto df_sector = df.Filter(sector_branch + " == " + std::to_string(sector));
+        const bool make_delta_p = (particle.GetPID() == 211);
 
-    	    if (particle.IsPhiBinningEnabled()) {
-    	        std::string phi_bin_branch = particle.GetName() + "_phiBin";
-    	        for (const auto& [phi_bin, label] : particle.GetPhiBinningLabels()) {
-    	            auto df_phi = df_sector.Filter(phi_bin_branch + " == " + std::to_string(phi_bin));
+        std::vector<std::pair<std::string, std::string>> dp_branches;
 
-    	            auto h = df_phi.Histo2D(
-    	                {("hMM_vs_" + particle.GetName() + "_sec" + std::to_string(sector) + "_phi" + label + "_id" + std::to_string(unique_hist_id)).c_str(),
-    	                 ("MM vs " + particle.GetName() + " Momentum [Sector " + std::to_string(sector) + ", Phi Bin: " + label + "]; Momentum (GeV); MM (GeV/c^2)").c_str(),
-    	                 mom_bins, mom_low, mom_high, missing_mass_bins, missing_mass_low, missing_mass_high},
-    	                mom_branch, "missing_mass"
-    	            );
-		    h->Write();
+        if (make_delta_p) {
+            dp_branches = {
+                {"deltaP_fourvec", particle.GetName() + "_deltaP_fourvec"},
+                {"deltaP_legacy",  particle.GetName() + "_deltaP_legacy"},
+                {"deltaP_diff",    particle.GetName() + "_deltaP_diff"}
+            };
+        }
 
-                    hist_id  = unique_hist_id;
-		    meta_sector   = sector;
-		    is_phi_binning  = 1;
-		    meta_phi_bin = phi_bin;
+        for (int sector : particle.GetSectors()) {
+            auto df_sector =
+                df.Filter(sector_branch + " == " + std::to_string(sector));
 
-		    strncpy(meta_particle, particle.GetName().c_str(), sizeof(meta_particle));
-		    meta_particle[sizeof(meta_particle)-1] = '\0';
+            if (particle.IsPhiBinningEnabled()) {
+                const std::string phi_bin_branch = particle.GetPhiBinBranch();
 
-		    strncpy(meta_detector, particle.GetDetector().c_str(), sizeof(meta_detector));
-		    meta_detector[sizeof(meta_detector)-1] = '\0';
+                for (const auto& [phi_bin, label] : particle.GetPhiBinningLabels()) {
+                    auto df_phi =
+                        df_sector.Filter(phi_bin_branch + " == " + std::to_string(phi_bin));
 
-		    strncpy(x_var, "p", sizeof(x_var));
-		    x_var[sizeof(x_var)-1] = '\0';
+                    const std::string mm_hist_name =
+                        "hMM_vs_" + particle.GetName() +
+                        "_sec" + std::to_string(sector) +
+                        "_phi" + label +
+                        "_id" + std::to_string(unique_hist_id);
 
-		    x_bins = mom_bins;
-		    x_min = mom_low;
-		    x_max = mom_high;
+                    const std::string mm_hist_title =
+                        "MM vs " + particle.GetName() +
+                        " Momentum [Sector " + std::to_string(sector) +
+                        ", Phi Bin: " + label +
+                        "]; Momentum (GeV); MM (GeV/c^{2})";
 
-		    strncpy(y_var, "missing_mass", sizeof(y_var));
-		    y_var[sizeof(y_var)-1] = '\0';
+                    auto h_mm = df_phi.Histo2D(
+                        {mm_hist_name.c_str(),
+                         mm_hist_title.c_str(),
+                         mom_bins, mom_low, mom_high,
+                         missing_mass_bins, missing_mass_low, missing_mass_high},
+                        mom_branch,
+                        "missing_mass"
+                    );
 
-		    y_bins = missing_mass_bins;
-		    y_min = missing_mass_low;
-		    y_max = missing_mass_high;
+                    h_mm->Write();
 
-		    strncpy(meta_hist_name, ("hMM_vs_" + particle.GetName() + "_sec" + std::to_string(sector) + "_phi" + label + "_id" + std::to_string(unique_hist_id)).c_str(), sizeof(meta_hist_name));
-		    meta_hist_name[sizeof(meta_hist_name)-1] = '\0';
+                    FillMeta(
+                        sector,
+                        1,
+                        phi_bin,
+                        particle,
+                        "p",
+                        mom_bins,
+                        mom_low,
+                        mom_high,
+                        "missing_mass",
+                        missing_mass_bins,
+                        missing_mass_low,
+                        missing_mass_high,
+                        mm_hist_name
+                    );
 
-		    meta->Fill();
+                    unique_hist_id++;
 
-		    unique_hist_id++;
+                    if (make_delta_p) {
+                        for (const auto& [tag, branch] : dp_branches) {
+                            const std::string dp_hist_name =
+                                "h_" + tag + "_vs_" + particle.GetName() +
+                                "_sec" + std::to_string(sector) +
+                                "_phi" + label +
+                                "_id" + std::to_string(unique_hist_id);
 
-    	        }
-    	    } else {
-    	        auto h = df_sector.Histo2D(
-    	            {("hMM_vs_" + particle.GetName() + "_sec" + std::to_string(sector) + "_id" + std::to_string(unique_hist_id)).c_str(),
-    	             ("MM vs " + particle.GetName() + " Momentum [Sector " + std::to_string(sector) + "]; Momentum (GeV); MM (GeV/c^2)").c_str(),
-    	             mom_bins, mom_low, mom_high, missing_mass_bins, missing_mass_low, missing_mass_high},
-    	            mom_branch, "missing_mass"
-    	        );
-		h->Write();
+                            const std::string dp_hist_title =
+                                "#Delta p " + tag +
+                                " vs " + particle.GetName() +
+                                " Momentum [Sector " + std::to_string(sector) +
+                                ", Phi Bin: " + label +
+                                "]; Momentum (GeV); #Delta p (GeV)";
 
-		hist_id  = unique_hist_id;
-                meta_sector   = sector;
-                is_phi_binning  = 0;
-                meta_phi_bin = -1;
+                            auto h_dp = df_phi.Histo2D(
+                                {dp_hist_name.c_str(),
+                                 dp_hist_title.c_str(),
+                                 mom_bins, mom_low, mom_high,
+                                 dp_bins, dp_low, dp_high},
+                                mom_branch,
+                                branch
+                            );
 
-                strncpy(meta_particle, particle.GetName().c_str(), sizeof(meta_particle));
-                meta_particle[sizeof(meta_particle)-1] = '\0';
+                            h_dp->Write();
 
-                strncpy(meta_detector, particle.GetDetector().c_str(), sizeof(meta_detector));
-                meta_detector[sizeof(meta_detector)-1] = '\0';
+                            FillMeta(
+                                sector,
+                                1,
+                                phi_bin,
+                                particle,
+                                "p",
+                                mom_bins,
+                                mom_low,
+                                mom_high,
+                                tag,
+                                dp_bins,
+                                dp_low,
+                                dp_high,
+                                dp_hist_name
+                            );
 
-                strncpy(x_var, "p", sizeof(x_var));
-                x_var[sizeof(x_var)-1] = '\0';
+                            unique_hist_id++;
+                        }
+                    }
+                }
+            } else {
+                const std::string mm_hist_name =
+                    "hMM_vs_" + particle.GetName() +
+                    "_sec" + std::to_string(sector) +
+                    "_id" + std::to_string(unique_hist_id);
 
-                x_bins = mom_bins;
-                x_min = mom_low;
-                x_max = mom_high;
+                const std::string mm_hist_title =
+                    "MM vs " + particle.GetName() +
+                    " Momentum [Sector " + std::to_string(sector) +
+                    "]; Momentum (GeV); MM (GeV/c^{2})";
 
-                strncpy(y_var, "missing_mass", sizeof(y_var));
-                y_var[sizeof(y_var)-1] = '\0';
+                auto h_mm = df_sector.Histo2D(
+                    {mm_hist_name.c_str(),
+                     mm_hist_title.c_str(),
+                     mom_bins, mom_low, mom_high,
+                     missing_mass_bins, missing_mass_low, missing_mass_high},
+                    mom_branch,
+                    "missing_mass"
+                );
 
-                y_bins = missing_mass_bins;
-                y_min = missing_mass_low;
-                y_max = missing_mass_high;
+                h_mm->Write();
 
-                strncpy(meta_hist_name, ("hMM_vs_" + particle.GetName() + "_sec" + std::to_string(sector) + "_id" + std::to_string(unique_hist_id)).c_str(), sizeof(meta_hist_name));
-		meta_hist_name[sizeof(meta_hist_name)-1] = '\0';
+                FillMeta(
+                    sector,
+                    0,
+                    -1,
+                    particle,
+                    "p",
+                    mom_bins,
+                    mom_low,
+                    mom_high,
+                    "missing_mass",
+                    missing_mass_bins,
+                    missing_mass_low,
+                    missing_mass_high,
+                    mm_hist_name
+                );
 
-                meta->Fill();
+                unique_hist_id++;
 
-		unique_hist_id++;
-    	    }
-    	}
+                if (make_delta_p) {
+                    for (const auto& [tag, branch] : dp_branches) {
+                        const std::string dp_hist_name =
+                            "h_" + tag + "_vs_" + particle.GetName() +
+                            "_sec" + std::to_string(sector) +
+                            "_id" + std::to_string(unique_hist_id);
+
+                        const std::string dp_hist_title =
+                            "#Delta p " + tag +
+                            " vs " + particle.GetName() +
+                            " Momentum [Sector " + std::to_string(sector) +
+                            "]; Momentum (GeV); #Delta p (GeV)";
+
+                        auto h_dp = df_sector.Histo2D(
+                            {dp_hist_name.c_str(),
+                             dp_hist_title.c_str(),
+                             mom_bins, mom_low, mom_high,
+                             dp_bins, dp_low, dp_high},
+                            mom_branch,
+                            branch
+                        );
+
+                        h_dp->Write();
+
+                        FillMeta(
+                            sector,
+                            0,
+                            -1,
+                            particle,
+                            "p",
+                            mom_bins,
+                            mom_low,
+                            mom_high,
+                            tag,
+                            dp_bins,
+                            dp_low,
+                            dp_high,
+                            dp_hist_name
+                        );
+
+                        unique_hist_id++;
+                    }
+                }
+            }
+        }
     }
 
     meta->Write();
-
     outputFile->Close();
+
+    std::cout << "Wrote raw histograms to: " << outputFileName << "\n";
 
     return 0;
 }
