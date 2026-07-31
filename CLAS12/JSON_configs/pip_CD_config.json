@@ -1,27 +1,26 @@
 {
+  "schema_version": 2,
+
+  "dataset": {
+    "tree": "h22"
+  },
+
   "analysis": {
     "experiment": "CLAS12",
-    "run-group": "RGA",
-    "year": "Sp19",
     "beam_energy": 10.1998,
-    "missing_mass": {
-      "low": 0.8,
-      "high": 1.2,
-      "bin_width": 0.005
-    },
-    "dp": {
-      "low": -0.2,
-      "high": 0.2,
-      "bin_width": 0.02
-    },
     "channel": "epip(N)",
     "bending": "inbending",
-    "specifier": "CLAS12_CD_RGA_Sp19_In_pip",  
-    "momentum_bin": 0.05 
+    "specifier": "CLAS12_CD_RGA_Sp19_In_pip",
+    "momentum_bin": 0.05
+  },
+
+  "detector": {
+    "adapter": "CLAS12"
   },
 
   "particles": [
     {
+      "role": "electron",
       "name": "El",
       "pid": 11,
       "mass": 0.000511,
@@ -31,40 +30,169 @@
       "sector_branch": "esec",
       "detector": "FD",
       "sectors": [1, 2, 3, 4, 5, 6],
-
       "momentum": {
         "low": 2.0,
         "high": 9.0,
         "bin_width": 0.05
       },
-
       "phi": {
         "enabled": true,
         "handling": "CLAS12_FD_El_Standard"
       }
     },
-
     {
+      "role": "pion",
       "name": "Pip",
       "pid": 211,
-      "mass": 0.140,
+      "mass": 0.13957039,
       "px": "pipx",
       "py": "pipy",
       "pz": "pipz",
       "sector_branch": "pipsec",
       "detector": "CD",
       "sectors": [1, 2, 3, 4, 5, 6],
-
       "momentum": {
         "low": 0.0,
         "high": 10.0,
         "bin_width": 0.05
       },
-
       "phi": {
         "enabled": false,
         "handling": "CLAS12_CD_Standard"
       }
     }
-  ]
+  ],
+
+  "observables": [
+    {
+      "name": "missing_mass",
+      "type": "missing_mass",
+      "output": "missing_mass",
+      "detected_roles": ["electron", "pion"]
+    },
+    {
+      "name": "pion_deltaP_fourvec",
+      "type": "deltaP_epipN_fourvec",
+      "output": "Pip_deltaP_fourvec",
+      "roles": {
+        "electron": "electron",
+        "pion": "pion"
+      }
+    },
+    {
+      "name": "pion_deltaP_legacy",
+      "type": "deltaP_epipN_legacy",
+      "output": "Pip_deltaP_legacy",
+      "roles": {
+        "electron": "electron",
+        "pion": "pion"
+      }
+    },
+    {
+      "name": "pion_deltaP_diff",
+      "type": "difference",
+      "output": "Pip_deltaP_diff",
+      "roles": {
+        "lhs": "Pip_deltaP_fourvec",
+        "rhs": "Pip_deltaP_legacy"
+      }
+    }
+  ],
+
+  "histograms": [
+    {
+      "name": "MM_vs_electron_p",
+      "particle_role": "electron",
+      "x": "p",
+      "y": "missing_mass",
+      "x_axis": {
+        "bins": 140,
+        "low": 2.0,
+        "high": 9.0
+      },
+      "y_axis": {
+        "bins": 80,
+        "low": 0.8,
+        "high": 1.2
+      },
+      "split_sector": true,
+      "split_phi": true
+    },
+    {
+      "name": "MM_vs_pion_p",
+      "particle_role": "pion",
+      "x": "p",
+      "y": "missing_mass",
+      "x_axis": {
+        "bins": 200,
+        "low": 0.0,
+        "high": 10.0
+      },
+      "y_axis": {
+        "bins": 80,
+        "low": 0.8,
+        "high": 1.2
+      },
+      "split_sector": true,
+      "split_phi": true
+    },
+    {
+      "name": "deltaP_fourvec_vs_p",
+      "particle_role": "pion",
+      "x": "p",
+      "y": "Pip_deltaP_fourvec",
+      "x_axis": {
+        "bins": 200,
+        "low": 0.0,
+        "high": 10.0
+      },
+      "y_axis": {
+        "bins": 40,
+        "low": -0.2,
+        "high": 0.2
+      },
+      "split_sector": true,
+      "split_phi": false
+    },
+    {
+      "name": "deltaP_legacy_vs_p",
+      "particle_role": "pion",
+      "x": "p",
+      "y": "Pip_deltaP_legacy",
+      "x_axis": {
+        "bins": 200,
+        "low": 0.0,
+        "high": 10.0
+      },
+      "y_axis": {
+        "bins": 40,
+        "low": -0.2,
+        "high": 0.2
+      },
+      "split_sector": true,
+      "split_phi": false
+    },
+    {
+      "name": "deltaP_diff_vs_p",
+      "particle_role": "pion",
+      "x": "p",
+      "y": "Pip_deltaP_diff",
+      "x_axis": {
+        "bins": 200,
+        "low": 0.0,
+        "high": 10.0
+      },
+      "y_axis": {
+        "bins": 40,
+        "low": -0.2,
+        "high": 0.2
+      },
+      "split_sector": true,
+      "split_phi": false
+    }
+  ],
+
+  "outputs": {
+    "directory": "../analysis_out/CLAS12_CD_RGA_Sp19_In_pip"
+  }
 }

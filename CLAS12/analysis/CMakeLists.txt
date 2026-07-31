@@ -16,6 +16,10 @@ foreach(src ${ANALYSIS_SOURCES})
     	ROOT::ROOTDataFrame
     )
 
+    target_compile_definitions(${exec_name} PRIVATE
+        MOMCORR_INCLUDE_DIR="${PROJECT_SOURCE_DIR}/include"
+    )
+
     set_target_properties(${exec_name} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY
         ${PROJECT_SOURCE_DIR}/CLAS12/executable

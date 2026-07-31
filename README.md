@@ -47,6 +47,13 @@ Executables are stored in CLAS12/executable/ .
 
 ## Initial Histogram Production
 
+Histogram production now uses a strict v2 JSON config. The config defines:
+- input tree name
+- particle roles and branch names
+- selected C++ observables
+- histogram requests and detector binning
+- output directory
+
 To make initial histograms, run as such:
 ```bash
 cd CLAS12/executable
@@ -59,6 +66,18 @@ cd CLAS12/executable
 
 changing the json file as needed.
 
+The current example config, `CLAS12/JSON_configs/pip_CD_config.json`, declares
+the `epip(N)` missing-mass and pion `deltaP` histogram workflow. Unknown schema
+keys, missing input branches, invalid binning, unknown detector adapters, and
+unknown observables are treated as fatal configuration errors.
+
+## Current Framework Boundary
+
+This branch establishes a durable histogram and observable foundation. It does
+not yet specify how momentum corrections are derived or applied. Correction
+production should plug into the provenance-rich histogram/observable outputs in
+a later design pass once the correction method is defined.
+
 ## Design Philosophy
 
 - Each particle is represented by a single configurable object (e.g. `MomCorrParticle`)
@@ -70,4 +89,3 @@ changing the json file as needed.
 
 Early development. APIs and structure may change significantly.  
 Documentation and usage examples will be added once the core design stabilizes.
-

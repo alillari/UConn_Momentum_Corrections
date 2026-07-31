@@ -5,7 +5,6 @@
 
 #include <string>
 #include <vector>
-#include <unordered_map>
 
 enum class PhiHandling {
     None,
@@ -31,6 +30,9 @@ public:
         PhiHandling phiHandling,
         bool usePhiBinning
     );
+
+    void SetRole(const std::string& role);
+    std::string GetRole() const;
 
     // Physics identity
     std::string GetName() const;
@@ -74,12 +76,13 @@ public:
 
     double ComputeLocalPhi(double phi, double p, int sector) const;
     int PhiBin(double localPhi) const;
-    std::unordered_map<int, std::string> GetPhiBinningLabels() const;
+    std::vector<std::pair<int, std::string>> GetPhiBinningLabels() const;
 
     ROOT::RDF::RNode AddBranches(ROOT::RDF::RNode df) const;
 
 private:
     std::string name_;
+    std::string role_;
     int pid_;
     double mass_;
 

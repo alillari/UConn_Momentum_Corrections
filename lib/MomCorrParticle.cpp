@@ -19,6 +19,7 @@ MomCorrParticle::MomCorrParticle(
     bool usePhiBinning
 )
     : name_(name),
+      role_(name),
       pid_(pid),
       mass_(mass),
       pxBranch_(pxBranch),
@@ -32,6 +33,9 @@ MomCorrParticle::MomCorrParticle(
       binWidth_(binWidth),
       phiHandling_(phiHandling),
       usePhiBinning_(usePhiBinning) {}
+
+void MomCorrParticle::SetRole(const std::string& role) { role_ = role; }
+std::string MomCorrParticle::GetRole() const { return role_; }
 
 std::string MomCorrParticle::GetName() const { return name_; }
 int MomCorrParticle::GetPID() const { return pid_; }
@@ -100,7 +104,7 @@ double MomCorrParticle::ComputeLocalPhi(double phi, double p, int sector) const 
     }
 }
 
-std::unordered_map<int, std::string> MomCorrParticle::GetPhiBinningLabels() const {
+std::vector<std::pair<int, std::string>> MomCorrParticle::GetPhiBinningLabels() const {
     if (!usePhiBinning_) {
         return {{0, "no phi bin"}};
     }
@@ -171,16 +175,16 @@ ROOT::RDF::RNode MomCorrParticle::AddBranches(ROOT::RDF::RNode df) const {
 
     df = df.Define(
         GetLocalPhiBranch(),
-        [this](double phi, double p, int sector) {
-            return ComputeLocalPhi(phi, p, sector);
+        [particle = *this](double phi, double p, int sector) {
+            return particle.ComputeLocalPhi(phi, p, sector);
         },
         {GetPhiBranch(), GetMagBranch(), GetDerivedSectorBranch()}
     );
 
     df = df.Define(
         GetPhiBinBranch(),
-        [this](double localPhi) {
-            return PhiBin(localPhi);
+        [particle = *this](double localPhi) {
+            return particle.PhiBin(localPhi);
         },
         {GetLocalPhiBranch()}
     );
