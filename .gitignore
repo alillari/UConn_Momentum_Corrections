@@ -9,3 +9,4 @@ CLAS12/analysis_out/
 *.so
 *.dylib
 *.pcm
+__pycache__/
