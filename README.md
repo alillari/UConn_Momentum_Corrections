@@ -120,6 +120,67 @@ python -m unittest discover -s tests -p 'test_exclusivity_diagnostics.py'
 To adjust report layout without rereading the data, use the same command with
 `--render-only`. All numerical results remain in the saved summary/histograms.
 
+## 3D binning before exclusivity fits
+
+The binning frontend establishes **sector-separated cells in momentum magnitude,
+theta, and shifted phi** for each particle. It compares coarse, intermediate
+(`balanced`), and fine grids on the full input, and saves the missing-mass
+spectrum of every cell in the selected grid. No fitting or selection is applied.
+
+```bash
+python tools/exclusivity_binning.py \
+  --input /path/to/prepare_root_files \
+  --diagnostics-config CLAS12/JSON_configs/rgk_epip_diagnostics.json \
+  --binning-config CLAS12/JSON_configs/rgk_epip_binning.json \
+  --output /path/to/3d_binning_output
+```
+
+The coordinate conventions, units, candidate grids, and selected schemes are
+explicit in the binning JSON. The user-confirmed shifted-phi equations are
+`phi_local - 30/p` for electrons and `phi_local + 32/(p - 0.05)` for positive
+pions, with momentum in GeV/c and azimuth in degrees. `phi_local` uses Richard's
+sector unwrap and subtracts `(sector - 1)*60`. The result is not wrapped again.
+Theta is in degrees, independently of the older C++ branch conventions.
+
+The default intermediate grids use 0.25 GeV/c momentum bins in the populated
+region, variable-width theta bins, and 10-degree shifted-phi bins. Tails use
+wider bins. The 0.85-1.05 GeV mass band is only a population diagnostic and
+contains background; its counts do not establish signal yield or fit quality.
+See `docs/rgk_3d_binning.md` for the measured tradeoffs and domain coverage.
+
+Outputs are `binning_report.pdf`, PNG views, `binning.json`, `summary.json`,
+`manifest.json`, `cells.npz`, and one cell-boundary/count CSV per particle.
+`cells.npz` stores selected-grid mass spectra, explicit spectrum overflow
+counts, every candidate grid's populations, and selected-grid run populations.
+All sectors remain separate. Plot projections may sum over sectors, but the
+saved cells never do. Empty and out-of-domain cells/rows are explicitly counted.
+
+The Python cell-assignment API is in `python/momcorr/binning.py`. IDs are C-order
+flat indices of `(sector, p, theta, shifted_phi)`. Intervals are half-open with
+the final right edge included. Retrieve a cell's spectrum using the exact saved
+config and `cells.npz`:
+
+```python
+import json
+import numpy as np
+from momcorr.binning import load_binning  # PYTHONPATH=/path/to/repo/python
+
+config = json.load(open("binning.json"))
+grids = load_binning(config)
+role = "pion"
+scheme = config["particles"][role]["selected_scheme"]
+grid = grids[role][scheme]
+cell_id = 100
+with np.load("cells.npz") as cells:
+    bounds = grid.bounds(cell_id)
+    counts = cells[f"{role}_spectra"][cell_id]
+    mass_edges = cells["mass_edges"]
+```
+
+Use `--render-only` to redraw an existing bundle; changed configurations require
+a new analysis. Run all optional Python tests with `python -m unittest discover
+-s tests`.
+
 ## Design Philosophy
 
 - Each particle is represented by a single configurable object (e.g. `MomCorrParticle`)
