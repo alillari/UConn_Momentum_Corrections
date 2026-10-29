@@ -1,0 +1,46 @@
+{
+  "diagnostics_schema_version": 1,
+  "dataset": {
+    "tree": "h22",
+    "identity": "RG-K fall 2018 6535 MeV Pass 2; user identification via Alex",
+    "upstream_selection": "Not documented in the supplied ROOT trees",
+    "input_energy_loss_corrections": "None; user confirmation 2026-10-29",
+    "other_input_corrections": "Not independently established; supplied momenta preserved"
+  },
+  "branches": {
+    "run": "run", "event": "evn",
+    "electron_px": "ex", "electron_py": "ey", "electron_pz": "ez",
+    "pion_px": "pipx", "pion_py": "pipy", "pion_pz": "pipz",
+    "electron_sector": "esec", "pion_sector": "pipsec"
+  },
+  "conditions": {
+    "beam_energy_gev": 6.53536,
+    "beam_energy_status": "Nominal low-energy RG-K value from JeffersonLab clas12-config; not per-run RCDB",
+    "electron_mass_gev": 0.000511,
+    "pion_mass_gev": 0.139570,
+    "target_mass_gev": 0.938272,
+    "neutron_mass_gev": 0.9395654,
+    "mass_convention": "Matches the existing include/Kinematics.h constants",
+    "target": "LH2, proton at rest",
+    "bending": "outbending",
+    "torus_scale": 1.0,
+    "solenoid_scale": -1.0,
+    "sources": [
+      {"url": "https://github.com/JeffersonLab/clas12-config#run-configurations", "supports": "Nominal 6535.36 MeV beam, LH2, field polarities, FT off"},
+      {"url": "https://clasweb.jlab.org/wiki/images/e/ed/Rgk_analysis_document.pdf", "supports": "Run range 5875-6000 at 6.535 GeV; production outbending; LH2. Data-taking conditions only; note describes pass-1 processing."}
+    ]
+  },
+  "axes": {
+    "electron_p": {"bins": 140, "low": 0.0, "high": 7.0, "label": "Electron momentum [GeV/c]"},
+    "pion_p": {"bins": 140, "low": 0.0, "high": 7.0, "label": "Pion momentum [GeV/c]"},
+    "electron_theta": {"bins": 90, "low": 0.0, "high": 90.0, "label": "Electron theta [deg]"},
+    "pion_theta": {"bins": 90, "low": 0.0, "high": 90.0, "label": "Pion theta [deg]"},
+    "electron_phi": {"bins": 120, "low": -180.0, "high": 180.0, "label": "Electron phi [deg]"},
+    "pion_phi": {"bins": 120, "low": -180.0, "high": 180.0, "label": "Pion phi [deg]"},
+    "missing_mass": {"bins": 400, "low": -1.0, "high": 3.0, "label": "Signed missing mass [GeV/c^2]"},
+    "missing_mass2": {"bins": 400, "low": -2.0, "high": 6.0, "label": "Missing mass squared [GeV^2/c^4]"},
+    "q2": {"bins": 180, "low": 0.0, "high": 12.0, "label": "Q squared [GeV^2]"},
+    "w": {"bins": 180, "low": 0.0, "high": 4.0, "label": "W [GeV/c^2]"},
+    "delta_pion_p": {"bins": 400, "low": -1.0, "high": 1.0, "label": "Inferred minus measured pion momentum [GeV/c]"}
+  }
+}

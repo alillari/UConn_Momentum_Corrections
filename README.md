@@ -78,6 +78,48 @@ not yet specify how momentum corrections are derived or applied. Correction
 production should plug into the provenance-rich histogram/observable outputs in
 a later design pass once the correction method is defined.
 
+## Uncut single-pion diagnostics (optional Python frontend)
+
+`tools/exclusivity_diagnostics.py` reads two-track ROOT skims without building
+the C++ executable. Install `tools/requirements-diagnostics.txt` in a Python
+environment and run:
+
+```bash
+python tools/exclusivity_diagnostics.py \
+  --input /path/to/prepare_root_files \
+  --config CLAS12/JSON_configs/rgk_epip_diagnostics.json \
+  --output /path/to/diagnostic_output
+```
+
+The example is specifically for RG-K fall 2018, 6535 MeV, Pass 2. Its nominal
+6.53536 GeV beam energy and LH2 target have documented sources in the JSON.
+The nominal energy is not a per-run RCDB measurement. The input has no
+energy-loss corrections according to the data provider; other preparation
+selections are not documented in the ten-branch skim.
+
+This frontend applies no physics cuts, corrections, or candidate deduplication.
+It produces `diagnostics.pdf`, PNG figures, `summary.json`, a SHA-256 input
+`manifest.json`, and `histograms.npz`. The summary records numerical-invalid
+rows and display-range losses, schema/run checks, repeated run/event pairs,
+software versions, and code provenance. Repeated pairs are reported without
+assuming they are duplicate events: multiple pion candidates can share an ID.
+
+Missing mass squared retains its sign; the mass plot uses a signed square root.
+The pion momentum constraint is diagnostic only, and ambiguous physical roots
+are reported instead of choosing the root closest to the measured momentum.
+Input sector labels are preserved without assuming a detector region. Missing
+PID, vertex, timing, and track-quality quantities cannot be retuned from this
+skim. The diagnostics JSON has its own schema and is not a C++ v2 config.
+
+Run its independent physics and ROOT accounting checks with:
+
+```bash
+python -m unittest discover -s tests -p 'test_exclusivity_diagnostics.py'
+```
+
+To adjust report layout without rereading the data, use the same command with
+`--render-only`. All numerical results remain in the saved summary/histograms.
+
 ## Design Philosophy
 
 - Each particle is represented by a single configurable object (e.g. `MomCorrParticle`)
