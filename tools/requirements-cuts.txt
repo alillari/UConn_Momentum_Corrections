@@ -1,0 +1,2 @@
+-r requirements-diagnostics.txt
+scipy>=1.10

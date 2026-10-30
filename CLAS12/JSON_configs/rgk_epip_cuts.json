@@ -1,0 +1,101 @@
+{
+  "recipe_schema_version": 1,
+  "name": "rgk_epip_3d_gaussian_candidate_v1",
+  "observable": "missing_mass",
+  "roles": [
+    "electron",
+    "pion"
+  ],
+  "training_runs": [
+    5875,
+    5877,
+    5896
+  ],
+  "validation_runs": [
+    5880,
+    5932
+  ],
+  "ensemble": {
+    "reference_band": [
+      0.85,
+      1.05
+    ],
+    "min_reference_entries": 100,
+    "fit_windows": [
+      [
+        0.76,
+        1.12
+      ],
+      [
+        0.78,
+        1.16
+      ],
+      [
+        0.8,
+        1.2
+      ]
+    ],
+    "models": [
+      {
+        "signal": "gaussian",
+        "background": "bernstein",
+        "degree": 0
+      },
+      {
+        "signal": "gaussian",
+        "background": "bernstein",
+        "degree": 1
+      },
+      {
+        "signal": "gaussian",
+        "background": "bernstein",
+        "degree": 2
+      }
+    ],
+    "preferred_window": 1,
+    "fit": {
+      "center_range": [
+        0.86,
+        1.04
+      ],
+      "width_range": [
+        0.004,
+        0.06
+      ],
+      "width_seeds": [
+        0.012,
+        0.03
+      ],
+      "min_fit_entries": 150,
+      "max_iterations": 250,
+      "max_deviance_ndf": 2.0,
+      "min_contrast": 5.0,
+      "max_center_error_over_width": 0.25,
+      "max_relative_width_error": 0.35,
+      "max_covariance_condition": 1000000000000.0,
+      "boundary_center_fraction": 0.005,
+      "boundary_log_width_margin": 0.02
+    },
+    "stability": {
+      "min_windows": 2,
+      "max_center_span": 0.012,
+      "max_center_span_over_width": 0.5,
+      "max_width_ratio": 1.6,
+      "max_aicc_difference": 4.0
+    }
+  },
+  "cut": {
+    "lower_widths": 3.0,
+    "upper_widths": 3.0,
+    "sensitivity_scales": [
+      0.6666666666666666,
+      1.0,
+      1.3333333333333333
+    ]
+  },
+  "annotations": {
+    "validation_scope": "Peak/background fits use training runs only. Binning was explored on the full current sample before this split, so this is exploratory run-held-out validation, not a blind final test.",
+    "preparation_evidence": "The supplied preparation script indicates electron identification and exactly one accepted pion, with QA disabled in that script. Its external PID definitions and identity with the actual producer code are unverified.",
+    "file_count": "The copied ROOT file list and local directory both contain 471 files. The reported expectation of 500 files has not been reconciled upstream."
+  }
+}
