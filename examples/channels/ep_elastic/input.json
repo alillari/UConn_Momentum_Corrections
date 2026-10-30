@@ -1,0 +1,42 @@
+{
+  "input_schema_version": 2,
+  "dataset": {
+    "tree": "h22",
+    "identity": "RG-K 6535 MeV template; confirm conditions and branch names for your own data",
+    "upstream_selection": "Requires one selected candidate per declared measured track. PID/QA and corrections must be documented by the data provider."
+  },
+  "channel": {
+    "name": "ep_elastic",
+    "final_state": [
+      "electron",
+      "proton"
+    ],
+    "measured": [
+      "electron",
+      "proton"
+    ]
+  },
+  "branches": {
+    "run": "run",
+    "event": "evn",
+    "electron_px": "ex",
+    "electron_py": "ey",
+    "electron_pz": "ez",
+    "electron_sector": "esec",
+    "proton_px": "protx",
+    "proton_py": "proty",
+    "proton_pz": "protz",
+    "proton_sector": "protsec"
+  },
+  "conditions": {
+    "beam_energy_gev": 6.53536,
+    "target": "proton_at_rest",
+    "particle_masses_gev": {
+      "electron": 0.000511,
+      "pi_plus": 0.13957,
+      "pi_minus": 0.13957,
+      "proton": 0.938272,
+      "neutron": 0.9395654
+    }
+  }
+}

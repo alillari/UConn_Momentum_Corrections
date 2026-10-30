@@ -1,0 +1,95 @@
+{
+  "units": {
+    "p": "GeV/c",
+    "theta": "deg",
+    "shifted_phi": "deg"
+  },
+  "coordinate_convention": "richard_sector_local_inverse_momentum_shift",
+  "binning_schema_version": 2,
+  "particles": {
+    "electron": {
+      "shift": {
+        "coefficient_deg_gev": -30.0,
+        "pole_gev": 0.0
+      },
+      "selected_scheme": "example_coarse",
+      "schemes": {
+        "example_coarse": {
+          "sectors": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "edges": {
+            "p": [
+              0.1,
+              1.0,
+              2.0,
+              3.0,
+              4.0,
+              5.0,
+              7.0
+            ],
+            "theta": [
+              0.0,
+              10.0,
+              20.0,
+              30.0,
+              45.0
+            ],
+            "shifted_phi": [
+              -180.0,
+              180.0
+            ]
+          }
+        }
+      },
+      "detector": "FD"
+    },
+    "proton": {
+      "shift": {
+        "coefficient_deg_gev": 0.0,
+        "pole_gev": 0.0
+      },
+      "selected_scheme": "example_coarse",
+      "schemes": {
+        "example_coarse": {
+          "sectors": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "edges": {
+            "p": [
+              0.1,
+              1.0,
+              2.0,
+              3.0,
+              4.0,
+              5.0,
+              7.0
+            ],
+            "theta": [
+              0.0,
+              10.0,
+              20.0,
+              30.0,
+              45.0
+            ],
+            "shifted_phi": [
+              -180.0,
+              180.0
+            ]
+          }
+        }
+      },
+      "detector": "FD"
+    }
+  }
+}

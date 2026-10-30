@@ -10,12 +10,20 @@ from momcorr.binning import load_binning
 from momcorr.calibration import build_cache, derive
 from momcorr.evaluation import apply_selection
 from momcorr.recipe import load_recipe
+from momcorr.channels import load_input_config
 import exclusivity_diagnostics as diagnostics
 
 
 def cache_args(parser):
     parser.add_argument("--input", required=True, type=Path)
-    parser.add_argument("--diagnostics-config", required=True, type=Path)
+    parser.add_argument(
+        "--dataset-config",
+        "--diagnostics-config",
+        dest="diagnostics_config",
+        required=True,
+        type=Path,
+        help="Explicit channel/input config (schema 2) or legacy RG-K diagnostics config",
+    )
     parser.add_argument("--binning-config", required=True, type=Path)
     parser.add_argument("--recipe", required=True, type=Path)
 
@@ -57,7 +65,9 @@ def main():
     run.add_argument("--no-masks", action="store_true")
     args = parser.parse_args()
     if args.command in {"run", "cache"}:
-        config = diagnostics.load_config(args.diagnostics_config)
+        config = load_input_config(args.diagnostics_config)
+        if config.get("diagnostics_schema_version") == 1:
+            config = diagnostics.load_config(args.diagnostics_config)
         binning = json.loads(args.binning_config.read_text())
         load_binning(binning)
         recipe = load_recipe(args.recipe)

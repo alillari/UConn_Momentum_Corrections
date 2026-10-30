@@ -13,10 +13,11 @@ from .skim import coordinates, observables
 from .cuts import WindowTable, DECISION_REASONS
 from .provenance import sha256_file, code_state
 from .root_skim import root_files, read_file, require_separate_output
+from .channels import observable_values, validate_workflow
 
 
 def apply_selection(input_dir, selection, output, selection_path, write_masks=True):
-    if selection.get("selection_schema_version") != 1:
+    if selection.get("selection_schema_version") not in (1, 2):
         raise ValueError("Unknown selection schema")
     if selection != json.loads(Path(selection_path).read_text()):
         raise ValueError("Selection object differs from its provenance file")
@@ -33,11 +34,24 @@ def apply_selection(input_dir, selection, output, selection_path, write_masks=Tr
     }
     diagnostics = selection["diagnostics"]
     recipe = selection["recipe"]
+    validate_workflow(diagnostics, selection["binning"], recipe)
+    modern = recipe["recipe_schema_version"] == 2
+    if selection["selection_schema_version"] != recipe["recipe_schema_version"]:
+        raise ValueError("Selection and recipe schemas differ")
     digest = sha256_file(selection_path)
-    mass_edges = np.array(selection["binning"]["mass_edges_gev"])
+    spectrum_edges = np.array(
+        recipe["spectrum"]["edges"]
+        if modern
+        else selection["binning"]["mass_edges_gev"]
+    )
     delta_edges = np.linspace(-0.5, 0.5, 251)
-    axes = {"mass": mass_edges, "delta": delta_edges}
-    hist = {"mass_edges": mass_edges, "delta_edges": delta_edges}
+    primary = "observable" if modern else "mass"
+    axes = (
+        {primary: spectrum_edges}
+        if modern
+        else {"mass": spectrum_edges, "delta": delta_edges}
+    )
+    hist = {key + "_edges": edges for key, edges in axes.items()}
     losses, counters, by_run, sensitivity = (
         {},
         {r: {g: Counter() for g in ("training", "validation", "other")} for r in roles},
@@ -90,7 +104,13 @@ def apply_selection(input_dir, selection, output, selection_path, write_masks=Tr
             ):
                 n = len(data["run"])
                 rows += n
-                derived = observables(data, diagnostics["conditions"])
+                if modern:
+                    values = observable_values(data, diagnostics, recipe)
+                    variables = {"observable": values}
+                else:
+                    derived = observables(data, diagnostics["conditions"])
+                    values = derived[recipe["observable"]]
+                    variables = {"mass": values, "delta": derived["delta_pion_p"]}
                 group = {
                     "training": np.isin(data["run"], recipe["training_runs"]),
                     "validation": np.isin(data["run"], recipe["validation_runs"]),
@@ -105,9 +125,7 @@ def apply_selection(input_dir, selection, output, selection_path, write_masks=Tr
                     ids, grid_reasons = grid.assign(
                         coordinates(data, role, selection["binning"]["particles"][role])
                     )
-                    passed, reasons = tables[role].apply(
-                        ids, derived[selection["observable"]]
-                    )
+                    passed, reasons = tables[role].apply(ids, values)
                     branches.update(
                         {
                             role + "_cell": ids,
@@ -121,17 +139,14 @@ def apply_selection(input_dir, selection, output, selection_path, write_masks=Tr
                         c["input"] += int(mask.sum())
                         for code, label in enumerate(DECISION_REASONS):
                             c[label] += int((mask & (reasons == code)).sum())
-                        for variable, values in (
-                            ("mass", derived["missing_mass"]),
-                            ("delta", derived["delta_pion_p"]),
-                        ):
+                        for variable, variable_values in variables.items():
                             for stage, active in (
                                 ("before", mask),
                                 ("after", mask & passed),
                             ):
                                 fill(
                                     f"{role}_{name}_{stage}_{variable}",
-                                    values[active],
+                                    variable_values[active],
                                     axes[variable],
                                 )
                     for run in np.unique(data["run"]):
@@ -142,18 +157,18 @@ def apply_selection(input_dir, selection, output, selection_path, write_masks=Tr
                         c["supported"] += int((mask & np.isin(reasons, [0, 4])).sum())
                         c["pass"] += int((mask & passed).sum())
                     for scale in recipe["cut"]["sensitivity_scales"]:
-                        active, _ = tables[role].apply(
-                            ids, derived["missing_mass"], width_scale=scale
-                        )
+                        active, _ = tables[role].apply(ids, values, width_scale=scale)
                         key = f"{scale:.8g}"
                         total = sensitivity[role].setdefault(key, Counter())
                         total["validation_pass"] += int(
                             (active & group["validation"]).sum()
                         )
                         fill(
-                            f"{role}_sensitivity_{key}_delta",
-                            derived["delta_pion_p"][active & group["validation"]],
-                            delta_edges,
+                            f"{role}_sensitivity_{key}_{primary if modern else 'delta'}",
+                            variables[primary if modern else "delta"][
+                                active & group["validation"]
+                            ],
+                            axes[primary if modern else "delta"],
                         )
                 if friend is not None:
                     friend["cuts"].extend(branches)
@@ -207,7 +222,7 @@ def apply_selection(input_dir, selection, output, selection_path, write_masks=Tr
         "code": code_state(),
         "files": len(files),
         "entries": sum(r["entries"] for r in manifest),
-        "interpretation": "Pass fractions are retention, not signal efficiency/purity. Delta-p is correlated with missing mass and is a sculpting diagnostic, not independent physics validation.",
+        "interpretation": "Pass fractions are retention, not signal efficiency/purity. Before/after spectra of the selected observable are selection diagnostics, not independent physics validation.",
     }
     (output / "evaluation.json").write_text(
         json.dumps(summary, indent=2, allow_nan=False) + "\n"

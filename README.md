@@ -12,6 +12,13 @@ The goal of this project is to provide a modular and configurable framework for:
 
 The design emphasizes **reusability**, **clear separation of responsibilities**, and **dataset/particle-level configurability**.
 
+The Python candidate-cut workflow now has explicit electron, pi+, pi- and
+proton identities, with templates for epipn, elastic ep, and fully measured
+ep pi+ pi-. Negative-pion input requires all four tracks measured. See
+[developing channel cuts](docs/channels.md) and the
+[workflow commands](docs/exclusivity_workflow.md). The current coordinate grids
+are FD-only; new-channel templates require validation on their own data.
+
 ## Project Structure
 
 - `include/`  

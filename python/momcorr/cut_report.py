@@ -45,6 +45,18 @@ def create_report(cache_dir, model_dir, evaluation_dir, output):
         hist = {k: archive[k] for k in archive.files}
     plt.rcParams.update({"font.size": 10, "axes.titlesize": 10, "pdf.fonttype": 42})
     roles = list(selection["cells"])
+    modern = selection["recipe"]["recipe_schema_version"] == 2
+    spectrum_spec = selection["recipe"].get("spectrum", {})
+    observable_key = "observable" if modern else "mass"
+    observable_label = spectrum_spec.get("label", "Missing mass [GeV/c^2]")
+    parameter_unit = spectrum_spec.get("unit", "GeV")
+    observable_edges = cached["observable_edges" if modern else "mass_edges"]
+    reference_value = (
+        spectrum_spec["reference_value"]
+        if modern
+        else selection["diagnostics"]["conditions"]["neutron_mass_gev"]
+    )
+    role_groups = [roles[i : i + 2] for i in range(0, len(roles), 2)]
     colors = {"ready": "#277e62", "review": "#d48a2c", "insufficient": "#8697a2"}
     page = 0
 
@@ -111,9 +123,20 @@ def create_report(cache_dir, model_dir, evaluation_dir, output):
             + ". Held-out validation runs: "
             + ", ".join(map(str, selection["recipe"]["validation_runs"]))
             + ".",
-            "Each electron/pion sector-separated 3D cell has a Gaussian-peak fit with positive polynomial background alternatives. Fits compare identical domains by AICc; domain changes and plausible-model differences are separate stability checks.",
+            "Each particle's sector-separated 3D cell has a Gaussian-peak fit with positive polynomial background alternatives. Fits compare identical domains by AICc; domain changes and plausible-model differences are separate stability checks.",
             "Ready = configured algorithmic gates passed; review = ambiguous or failed checks; insufficient = too few reference-band entries. Unsupported cells receive no inferred or neighboring cut.",
         ]
+        if modern:
+            channel = metadata["diagnostics"]["channel"]
+            paragraphs.insert(
+                1,
+                f"Channel: {channel['name']}. Measured tracks: {', '.join(channel['measured'])}. Selected observable: {observable_label}; omitted measured tracks: {selection['observable']['omit']}.",
+            )
+            paragraphs.insert(
+                2,
+                "Dataset identity: "
+                + metadata["diagnostics"]["dataset"].get("identity", "Not supplied"),
+            )
         for role, rows in selection["cells"].items():
             statuses = Counter(c["window"]["status"] for c in rows)
             v = evaluation["decisions"][role]["validation"]
@@ -122,21 +145,28 @@ def create_report(cache_dir, model_dir, evaluation_dir, output):
                 f"{role.capitalize()}: {statuses['ready']:,} ready, {statuses['review']:,} review, {statuses['insufficient']:,} insufficient cells. Validation support covers {100*supported/max(1,v['input']):.2f}% of input rows; {v['pass']:,}/{v['input']:,} rows pass ({100*v['pass']/max(1,v['input']):.2f}%). Conditional retention in supported cells: {100*v['pass']/max(1,supported):.2f}%."
             )
         paragraphs += [
-            "Roles are evaluated independently. No implicit electron AND pion selection is used. Pass fractions describe retained data, not signal efficiency or purity.",
+            "Roles are evaluated independently. No implicit combination of particle selections is used. Pass fractions describe retained data, not signal efficiency or purity.",
             "Input momenta are preserved and no energy-loss correction is applied. Nominal beam energy, coordinate conventions, bin edges, and all fit/cut settings are saved with the candidate.",
         ]
         text_page(pdf, "First candidate exclusivity windows", paragraphs, "overview")
 
-        fig, axes = figure("Fit status and supported validation coverage", 1, 2)
-        for ax, role in zip(axes.flat, roles):
-            counts = Counter(c["window"]["status"] for c in selection["cells"][role])
-            labels = ["ready", "review", "insufficient"]
-            ax.bar(
-                labels, [counts[k] for k in labels], color=[colors[k] for k in labels]
+        for group in role_groups:
+            fig, axes = figure(
+                "Fit status and supported validation coverage", 1, len(group)
             )
-            ax.set_title(role.capitalize())
-            ax.set_ylabel("3D cells, including empty cells")
-        save(pdf, fig, "fit_status")
+            for ax, role in zip(axes.flat, group):
+                counts = Counter(
+                    c["window"]["status"] for c in selection["cells"][role]
+                )
+                labels = ["ready", "review", "insufficient"]
+                ax.bar(
+                    labels,
+                    [counts[k] for k in labels],
+                    color=[colors[k] for k in labels],
+                )
+                ax.set_title(role.capitalize())
+                ax.set_ylabel("3D cells, including empty cells")
+            save(pdf, fig, "fit_status")
 
         for role in roles:
             for status in ("ready", "review"):
@@ -191,7 +221,7 @@ def create_report(cache_dir, model_dir, evaluation_dir, output):
                             key=lambda f: f["aicc"],
                         )
                     h = Histogram(
-                        cached["mass_edges"], cached[f"{role}_training_spectra"][i]
+                        observable_edges, cached[f"{role}_training_spectra"][i]
                     ).window(*fit["window"])
                     model = PeakBackground(h.edges, **fit["model"])
                     signal, background, _ = model.components(
@@ -214,8 +244,8 @@ def create_report(cache_dir, model_dir, evaluation_dir, output):
                         + textwrap.fill(issues, 38),
                         fontsize=8,
                     )
-                    ax.set_xlabel("Missing mass [GeV/c^2]")
-                    ax.set_ylabel("Counts / mass bin")
+                    ax.set_xlabel(observable_label)
+                    ax.set_ylabel("Counts / observable bin")
                     ax.legend(fontsize=7)
                     residual = np.sign(h.counts - expected) * np.sqrt(
                         np.maximum(
@@ -230,153 +260,183 @@ def create_report(cache_dir, model_dir, evaluation_dir, output):
                     )
                     axes[1, col].plot(centers, residual, ".", ms=3, color="#176b96")
                     axes[1, col].axhline(0, color="#586976", lw=0.7)
-                    axes[1, col].set_xlabel("Missing mass [GeV/c^2]")
+                    axes[1, col].set_xlabel(observable_label)
                     axes[1, col].set_ylabel("Signed deviance residual")
                 save(pdf, fig, f"{role}_{status}_examples")
 
-        fig, axes = figure(
-            "Accepted peak parameters across the 3D cells",
-            len(roles),
-            2,
-            "One actual fit defines each candidate; alternative models/ranges are not averaged to shrink errors.",
-        )
-        neutron = selection["diagnostics"]["conditions"]["neutron_mass_gev"]
-        for row, role in enumerate(roles):
-            ready = [
-                c for c in selection["cells"][role] if c["window"]["status"] == "ready"
-            ]
-            p = np.array([np.mean(c["bounds"]["p"]) for c in ready])
-            sector = np.array([c["bounds"]["sector"] for c in ready])
-            for col, key in enumerate(("center", "width")):
-                values = np.array([c["window"][key] for c in ready])
-                axes[row, col].scatter(
-                    p, values, c=sector, cmap="tab10", s=7, alpha=0.6, vmin=1, vmax=6
-                )
-                axes[row, col].set_xlabel("Cell-center |p| [GeV/c]")
-                axes[row, col].set_ylabel(f"{role} peak {key} [GeV]")
-            axes[row, 0].axhline(neutron, color="#d48a2c", linestyle="--", lw=1)
-        save(pdf, fig, "parameters")
+        for group in role_groups:
+            fig, axes = figure(
+                "Accepted peak parameters across the 3D cells",
+                len(group),
+                2,
+                "One actual fit defines each candidate; alternative models/ranges are not averaged to shrink errors.",
+            )
+            for row, role in enumerate(group):
+                ready = [
+                    c
+                    for c in selection["cells"][role]
+                    if c["window"]["status"] == "ready"
+                ]
+                p = np.array([np.mean(c["bounds"]["p"]) for c in ready])
+                sector = np.array([c["bounds"]["sector"] for c in ready])
+                for col, key in enumerate(("center", "width")):
+                    values = np.array([c["window"][key] for c in ready])
+                    axes[row, col].scatter(
+                        p,
+                        values,
+                        c=sector,
+                        cmap="tab10",
+                        s=7,
+                        alpha=0.6,
+                        vmin=1,
+                        vmax=6,
+                    )
+                    axes[row, col].set_xlabel("Cell-center |p| [GeV/c]")
+                    axes[row, col].set_ylabel(f"{role} peak {key} [{parameter_unit}]")
+                if reference_value is not None:
+                    axes[row, 0].axhline(
+                        reference_value, color="#d48a2c", linestyle="--", lw=1
+                    )
+            save(pdf, fig, "parameters")
 
-        for variable, edges in (
-            ("mass", hist["mass_edges"]),
-            ("delta", hist["delta_edges"]),
-        ):
+        variables = [(observable_key, hist[observable_key + "_edges"])]
+        if not modern:
+            variables.append(("delta", hist["delta_edges"]))
+        for variable, edges in variables:
             note = (
-                "Held-out runs only. Mass is the selected observable; this plot does not independently validate the cut."
-                if variable == "mass"
+                "Held-out runs only. This is the selected observable; this plot does not independently validate the cut."
+                if variable == observable_key
                 else "Held-out runs only. Delta-p is correlated with missing mass: this is a sculpting diagnostic, not truth closure."
             )
-            fig, axes = figure(
-                "Held-out "
-                + (
-                    "missing-mass spectra"
-                    if variable == "mass"
-                    else "pion momentum-residual spectra"
-                ),
-                len(roles),
-                2,
-                note,
-            )
-            for row, role in enumerate(roles):
-                for col, normalize in enumerate((False, True)):
-                    for stage, color in (("before", "#176b96"), ("after", "#d48a2c")):
-                        spectrum(
-                            axes[row, col],
-                            f"{role}_validation_{stage}_{variable}",
-                            edges,
-                            stage,
-                            color,
-                            normalize,
-                        )
-                    axes[row, col].set_title(role + "-based selection")
-                    axes[row, col].set_xlabel(
-                        "Missing mass [GeV/c^2]"
-                        if variable == "mass"
-                        else "Inferred minus measured pion p [GeV/c]"
-                    )
-                    axes[row, col].set_ylabel(
-                        "Fraction of displayed entries" if normalize else "Counts / bin"
-                    )
-                    if not normalize:
-                        axes[row, col].set_yscale("log")
-                        axes[row, col].set_ylim(bottom=0.8)
-                    axes[row, col].legend()
-            save(pdf, fig, "validation_" + variable)
-
-        fig, axes = figure(
-            "Cut-width sensitivity on held-out data",
-            len(roles),
-            2,
-            "Same training-derived cells and fits; vary only the window width. These correlated alternatives are not repeated experiments.",
-        )
-        for row, role in enumerate(roles):
-            labels, retained = [], []
-            total = evaluation["decisions"][role]["validation"]["input"]
-            palette = plt.get_cmap("tab10")
-            for index, (scale, counts) in enumerate(
-                evaluation["width_sensitivity"][role].items()
-            ):
-                color = palette(index % 10)
-                label = f"{float(scale):.3g}x nominal width"
-                spectrum(
-                    axes[row, 0],
-                    f"{role}_sensitivity_{scale}_delta",
-                    hist["delta_edges"],
-                    label,
-                    color,
-                    True,
+            for group in role_groups:
+                fig, axes = figure(
+                    "Held-out "
+                    + (
+                        "selected-observable spectra"
+                        if variable == observable_key
+                        else "pion momentum-residual spectra"
+                    ),
+                    len(group),
+                    2,
+                    note,
                 )
-                labels.append(f"{float(scale):.3g}x")
-                retained.append(100 * counts["validation_pass"] / max(1, total))
-            axes[row, 0].set_xlabel("Inferred minus measured pion p [GeV/c]")
-            axes[row, 0].set_ylabel(role + ": fraction displayed")
-            axes[row, 0].legend(fontsize=8)
-            axes[row, 1].bar(
-                labels, retained, color=[palette(i % 10) for i in range(len(labels))]
-            )
-            axes[row, 1].set_xlabel("Window width scale")
-            axes[row, 1].set_ylabel("All validation rows retained [%]")
-        save(pdf, fig, "width_sensitivity")
+                for row, role in enumerate(group):
+                    for col, normalize in enumerate((False, True)):
+                        for stage, color in (
+                            ("before", "#176b96"),
+                            ("after", "#d48a2c"),
+                        ):
+                            spectrum(
+                                axes[row, col],
+                                f"{role}_validation_{stage}_{variable}",
+                                edges,
+                                stage,
+                                color,
+                                normalize,
+                            )
+                        axes[row, col].set_title(role + "-based selection")
+                        axes[row, col].set_xlabel(
+                            observable_label
+                            if variable == observable_key
+                            else "Inferred minus measured pion p [GeV/c]"
+                        )
+                        axes[row, col].set_ylabel(
+                            "Fraction of displayed entries"
+                            if normalize
+                            else "Counts / bin"
+                        )
+                        if not normalize:
+                            axes[row, col].set_yscale("log")
+                            axes[row, col].set_ylim(bottom=0.8)
+                        axes[row, col].legend()
+                save(pdf, fig, "validation_" + variable)
 
-        fig, axes = figure(
-            "Support and retention by run",
-            1,
-            len(roles),
-            "Support loss and rejection by the mass window are separate quantities. T/V denotes training/validation.",
-        )
-        for ax, role in zip(axes.flat, roles):
-            runs = sorted(
-                int(key.split("_")[-1])
-                for key in evaluation["by_run"]
-                if key.startswith(role + "_")
+        for group in role_groups:
+            fig, axes = figure(
+                "Cut-width sensitivity on held-out data",
+                len(group),
+                2,
+                "Same training-derived cells and fits; vary only the window width. These correlated alternatives are not repeated experiments.",
             )
-            support = []
-            passed = []
-            for run in runs:
-                c = evaluation["by_run"][f"{role}_{run}"]
-                support.append(100 * c["supported"] / c["input"])
-                passed.append(100 * c["pass"] / c["input"])
-            x = np.arange(len(runs))
-            ax.bar(x - 0.18, support, 0.36, label="supported", color="#176b96")
-            ax.bar(x + 0.18, passed, 0.36, label="pass", color="#d48a2c")
-            ax.set_xticks(
-                x,
-                [
-                    f"{r}\n{'T' if r in selection['recipe']['training_runs'] else 'V'}"
-                    for r in runs
-                ],
+            for row, role in enumerate(group):
+                labels, retained = [], []
+                total = evaluation["decisions"][role]["validation"]["input"]
+                palette = plt.get_cmap("tab10")
+                for index, (scale, counts) in enumerate(
+                    evaluation["width_sensitivity"][role].items()
+                ):
+                    color = palette(index % 10)
+                    label = f"{float(scale):.3g}x nominal width"
+                    spectrum(
+                        axes[row, 0],
+                        f"{role}_sensitivity_{scale}_{observable_key if modern else 'delta'}",
+                        (
+                            hist[observable_key + "_edges"]
+                            if modern
+                            else hist["delta_edges"]
+                        ),
+                        label,
+                        color,
+                        True,
+                    )
+                    labels.append(f"{float(scale):.3g}x")
+                    retained.append(100 * counts["validation_pass"] / max(1, total))
+                axes[row, 0].set_xlabel(
+                    observable_label
+                    if modern
+                    else "Inferred minus measured pion p [GeV/c]"
+                )
+                axes[row, 0].set_ylabel(role + ": fraction displayed")
+                axes[row, 0].legend(fontsize=8)
+                axes[row, 1].bar(
+                    labels,
+                    retained,
+                    color=[palette(i % 10) for i in range(len(labels))],
+                )
+                axes[row, 1].set_xlabel("Window width scale")
+                axes[row, 1].set_ylabel("All validation rows retained [%]")
+            save(pdf, fig, "width_sensitivity")
+
+        for group in role_groups:
+            fig, axes = figure(
+                "Support and retention by run",
+                1,
+                len(group),
+                "Support loss and rejection by the observable window are separate quantities. T/V denotes training/validation.",
             )
-            ax.set_title(role.capitalize())
-            ax.set_ylabel("Input rows [%]")
-            ax.legend()
-        save(pdf, fig, "runs")
+            for ax, role in zip(axes.flat, group):
+                runs = sorted(
+                    int(key.split("_")[-1])
+                    for key in evaluation["by_run"]
+                    if key.startswith(role + "_")
+                )
+                support = []
+                passed = []
+                for run in runs:
+                    c = evaluation["by_run"][f"{role}_{run}"]
+                    support.append(100 * c["supported"] / c["input"])
+                    passed.append(100 * c["pass"] / c["input"])
+                x = np.arange(len(runs))
+                ax.bar(x - 0.18, support, 0.36, label="supported", color="#176b96")
+                ax.bar(x + 0.18, passed, 0.36, label="pass", color="#d48a2c")
+                ax.set_xticks(
+                    x,
+                    [
+                        f"{r}\n{'T' if r in selection['recipe']['training_runs'] else 'V'}"
+                        for r in runs
+                    ],
+                )
+                ax.set_title(role.capitalize())
+                ax.set_ylabel("Input rows [%]")
+                ax.legend()
+            save(pdf, fig, "runs")
 
         paragraphs = [
             "Likelihood: independent unweighted Poisson bin counts. Gaussian peak and positive Bernstein-polynomial backgrounds are integrated over each bin. Empty bins participate. Analytic derivatives are used for optimization and local Fisher covariance.",
             "Model comparison: AICc is compared only on identical fit ranges. Plausible alternatives within the configured AICc difference, and winners from different ranges, must satisfy center/width stability gates. One actual fit supplies the cut; statistical errors are never divided by the number of alternatives.",
             "The likelihood-gain contrast is an algorithmic local diagnostic, not a discovery significance. Covariance errors describe the selected model locally and do not establish coverage under an unknown true background.",
             "Cut policy: center minus/plus the configured multiples of fitted width. Boundaries extending beyond the fitted domain require review. Sparse, failed, boundary-limited, poor-covariance, weak, or model/range-sensitive cases have no applied window.",
-            "Validation: run groups are disjoint. No fit is made to validation spectra. Before/after missing mass directly reflects selection on that same variable; delta-p is also correlated with it. Independent signal-efficiency, purity, or unbiased correction claims require further physics validation.",
+            "Validation: run groups are disjoint. No fit is made to validation spectra. Before/after spectra directly reflect selection on that same variable. Independent signal-efficiency, purity, or unbiased correction claims require further physics validation.",
             "Artifacts: cuts.json contains every cell and its status; fits.json.gz preserves all alternatives and failures. ROOT friend masks retain the original row order and run/event IDs, with separate pass, reason, cell, and grid-reason fields per particle role. Input file hashes and selection hashes are recorded.",
             "Input provenance note: "
             + metadata["diagnostics"]["dataset"].get(

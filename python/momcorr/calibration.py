@@ -20,18 +20,28 @@ from .cuts import window_from_fit
 from .skim import coordinates, observables
 from .provenance import code_state, sha256_file
 from .root_skim import root_files, read_file, require_separate_output
+from .channels import observable_values, validate_workflow
 
 
 def build_cache(input_dir, diagnostics, binning, recipe, output):
+    validate_workflow(diagnostics, binning, recipe)
+    modern = recipe["recipe_schema_version"] == 2
     grids = load_binning(binning)
     output = require_separate_output(input_dir, output)
     files = root_files(input_dir)
-    edges = np.asarray(binning["mass_edges_gev"])
+    edges = np.asarray(
+        recipe["spectrum"]["edges"] if modern else binning["mass_edges_gev"]
+    )
     selected = {
         role: grids[role][binning["particles"][role]["selected_scheme"]]
         for role in recipe["roles"]
     }
-    arrays = {"mass_edges": edges}
+    edge_key = "observable_edges" if modern else "mass_edges"
+    outside_name = "observable_outside" if modern else "mass_outside"
+    outside_accounting = (
+        "invalid_or_outside_observable" if modern else "invalid_or_outside_mass"
+    )
+    arrays = {edge_key: edges}
     accounting = {
         role: {partition: Counter() for partition in ("training", "validation")}
         for role in selected
@@ -42,7 +52,7 @@ def build_cache(input_dir, diagnostics, binning, recipe, output):
                 (grid.size, len(edges) - 1), dtype=np.uint64
             )
             arrays[f"{role}_{partition}_counts"] = np.zeros(grid.size, dtype=np.uint64)
-            arrays[f"{role}_{partition}_mass_outside"] = np.zeros(
+            arrays[f"{role}_{partition}_{outside_name}"] = np.zeros(
                 grid.size, dtype=np.uint64
             )
     run_counts, manifest = Counter(), []
@@ -60,8 +70,8 @@ def build_cache(input_dir, diagnostics, binning, recipe, output):
                     "Input contains runs not assigned to a training/validation partition"
                 )
             run_counts.update({str(int(r)): int(n) for r, n in zip(runs, counts)})
-            derived = observables(data, diagnostics["conditions"])
-            mass_bin, mass_ok = bin_indices(derived["missing_mass"], edges)
+            values = observable_values(data, diagnostics, recipe)
+            observable_bin, observable_ok = bin_indices(values, edges)
             for role, grid in selected.items():
                 ids, reasons = grid.assign(
                     coordinates(data, role, binning["particles"][role])
@@ -69,16 +79,16 @@ def build_cache(input_dir, diagnostics, binning, recipe, output):
                 for partition in ("training", "validation"):
                     group = np.isin(data["run"], recipe[f"{partition}_runs"])
                     inside = group & (ids >= 0)
-                    good = inside & mass_ok
+                    good = inside & observable_ok
                     np.add.at(arrays[f"{role}_{partition}_counts"], ids[inside], 1)
                     np.add.at(
                         arrays[f"{role}_{partition}_spectra"],
-                        (ids[good], mass_bin[good]),
+                        (ids[good], observable_bin[good]),
                         1,
                     )
                     np.add.at(
-                        arrays[f"{role}_{partition}_mass_outside"],
-                        ids[inside & ~mass_ok],
+                        arrays[f"{role}_{partition}_{outside_name}"],
+                        ids[inside & ~observable_ok],
                         1,
                     )
                     accounting[role][partition].update(
@@ -87,7 +97,7 @@ def build_cache(input_dir, diagnostics, binning, recipe, output):
                             "inside_grid": int(inside.sum()),
                             "outside_grid": int((group & ~inside).sum()),
                             "spectrum": int(good.sum()),
-                            "invalid_or_outside_mass": int((inside & ~mass_ok).sum()),
+                            outside_accounting: int((inside & ~observable_ok).sum()),
                         }
                     )
         digest = sha256_file(path)
@@ -111,10 +121,10 @@ def build_cache(input_dir, diagnostics, binning, recipe, output):
         for partition in ("training", "validation"):
             a = accounting[role][partition]
             assert a["input"] == a["inside_grid"] + a["outside_grid"]
-            assert a["inside_grid"] == a["spectrum"] + a["invalid_or_outside_mass"]
+            assert a["inside_grid"] == a["spectrum"] + a[outside_accounting]
             assert np.array_equal(
                 arrays[f"{role}_{partition}_spectra"].sum(axis=1)
-                + arrays[f"{role}_{partition}_mass_outside"],
+                + arrays[f"{role}_{partition}_{outside_name}"],
                 arrays[f"{role}_{partition}_counts"],
             )
     sources = [
@@ -123,7 +133,7 @@ def build_cache(input_dir, diagnostics, binning, recipe, output):
         if p.is_file() and p.suffix in {".groovy", ".sh", ".dat", ".cshrc"}
     ]
     metadata = {
-        "cache_schema_version": 1,
+        "cache_schema_version": 2 if modern else 1,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "files": len(files),
         "entries": sum(run_counts.values()),
@@ -141,6 +151,8 @@ def build_cache(input_dir, diagnostics, binning, recipe, output):
             "expected_total": "Not independently established upstream",
         },
     }
+    if modern:
+        metadata.update(observable=recipe["observable"], spectrum=recipe["spectrum"])
     (output / "cache.json").write_text(
         json.dumps(metadata, indent=2, allow_nan=False) + "\n"
     )
@@ -165,13 +177,20 @@ def derive(cache_dir, recipe, output, workers=1):
     cache_dir, output = Path(cache_dir), Path(output)
     output.mkdir(parents=True, exist_ok=True)
     meta = json.loads((cache_dir / "cache.json").read_text())
+    validate_workflow(meta["diagnostics"], meta["binning"], recipe)
+    modern = recipe["recipe_schema_version"] == 2
+    if modern and (
+        meta.get("observable") != recipe["observable"]
+        or meta.get("spectrum") != recipe["spectrum"]
+    ):
+        raise ValueError("Observable/spectrum differs from cache; rebuild cache")
     for key in ("training_runs", "validation_runs", "roles"):
         if recipe[key] != meta[key]:
             raise ValueError("Recipe partition/roles differ from cache; rebuild cache")
     grids = load_binning(meta["binning"])
     tasks = []
     with np.load(cache_dir / "histograms.npz") as cache:
-        edges = cache["mass_edges"]
+        edges = cache["observable_edges" if modern else "mass_edges"]
         for role in recipe["roles"]:
             h = cache[f"{role}_training_spectra"]
             tasks.extend(
@@ -217,7 +236,7 @@ def derive(cache_dir, recipe, output, workers=1):
         if executor is not None:
             executor.shutdown()
     selection = {
-        "selection_schema_version": 1,
+        "selection_schema_version": 2 if modern else 1,
         "status": "candidate_not_physics_validated",
         "observable": recipe["observable"],
         "recipe": recipe,

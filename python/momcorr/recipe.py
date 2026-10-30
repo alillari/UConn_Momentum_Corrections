@@ -4,6 +4,7 @@ import json
 
 import numpy as np
 from .models import SIGNALS, BACKGROUNDS
+from .channels import TRACKS, OBSERVABLE_UNITS, validate_observable
 
 
 def exact_keys(value, expected, label):
@@ -15,6 +16,7 @@ def exact_keys(value, expected, label):
 
 def load_recipe(path):
     r = json.loads(path.read_text())
+    modern = r.get("recipe_schema_version") == 2
     exact_keys(
         r,
         {
@@ -27,7 +29,8 @@ def load_recipe(path):
             "ensemble",
             "cut",
             "annotations",
-        },
+        }
+        | ({"spectrum"} if modern else set()),
         "recipe",
     )
     if not isinstance(r["annotations"], dict) or any(
@@ -35,12 +38,32 @@ def load_recipe(path):
         for k, v in r["annotations"].items()
     ):
         raise ValueError("Recipe annotations must be a string-to-string mapping")
-    if r["recipe_schema_version"] != 1 or r["observable"] != "missing_mass":
+    if modern:
+        validate_observable(r["observable"])
+        spectrum = r["spectrum"]
+        exact_keys(spectrum, {"edges", "label", "unit", "reference_value"}, "spectrum")
+        edges = np.asarray(spectrum["edges"], dtype=float)
+        if (
+            edges.ndim != 1
+            or len(edges) < 3
+            or not np.isfinite(edges).all()
+            or not (np.diff(edges) > 0).all()
+        ):
+            raise ValueError("Spectrum requires finite increasing bin edges")
+        if not isinstance(spectrum["label"], str) or not spectrum["label"].strip():
+            raise ValueError("Spectrum label is required")
+        if spectrum["unit"] != OBSERVABLE_UNITS[r["observable"]["kind"]]:
+            raise ValueError("Spectrum unit does not match observable")
+        if spectrum["reference_value"] is not None and not np.isfinite(
+            spectrum["reference_value"]
+        ):
+            raise ValueError("Reference value must be finite or null")
+    elif r["recipe_schema_version"] != 1 or r["observable"] != "missing_mass":
         raise ValueError("Unsupported recipe schema/observable adapter")
     if (
         not r["roles"]
         or len(set(r["roles"])) != len(r["roles"])
-        or set(r["roles"]) - {"electron", "pion"}
+        or set(r["roles"]) - (TRACKS if modern else {"electron", "pion"})
     ):
         raise ValueError("Invalid or duplicated particle roles")
     for partition in ("training_runs", "validation_runs"):
@@ -105,6 +128,10 @@ def load_recipe(path):
     ]:
         if len(pair) != 2 or not np.isfinite(pair).all() or pair[0] >= pair[1]:
             raise ValueError("Invalid range")
+    if modern:
+        for low, high in [e["reference_band"]] + e["fit_windows"]:
+            if low < edges[0] or high > edges[-1]:
+                raise ValueError("Fit/reference ranges must lie in the stored spectrum")
     if (
         f["width_range"][0] <= 0
         or not f["width_seeds"]

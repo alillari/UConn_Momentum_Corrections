@@ -1,6 +1,6 @@
 # Reusable exclusivity-window workflow
 
-The workflow derives **candidate** missing-mass windows in the established
+The workflow derives **candidate** exclusivity windows in explicit
 sector-separated 3D cells. It does not derive a momentum correction. The fitting
 library accepts an ordinary 1D count histogram and knows nothing about ROOT,
 runs, particles, sectors, filenames, or histogram-title conventions.
@@ -19,6 +19,7 @@ runs, particles, sectors, filenames, or histogram-title conventions.
 | `evaluation.py` | Applying windows, friend masks and retention accounting |
 | `cut_report.py` | Rendering saved results; no fit or cut policy |
 | `recipe.py` | Strict configuration validation |
+| `channels.py` | Charged identities, measured topologies and four-vector observables |
 
 No model or cut is chosen by a hard-coded run, sector, cell ID, or plot title.
 Numerical cut policy, fit families/ranges, admission counts, stability gates,
@@ -27,10 +28,12 @@ the component registry; ROOT iteration and cut application do not change.
 The current signal interface has a center and width, with bin probabilities
 and derivatives; bundled backgrounds are positive Bernstein polynomials.
 
-The framework currently includes the electron/pion-on-proton skim adapter.
-Reusing the statistical fitter on another observable does not require that
-adapter. Supporting a different input channel requires its own explicit
-observable/branch adapter, not hidden changes to the generic fit engine.
+The schema-2 workflow supports electron, pi_plus, pi_minus and proton tracks.
+It includes epipn, fully measured elastic ep, and fully measured ep pi+ pi-
+templates. Negative pions require all four tracks measured. See
+[channel development](channels.md) for the input/observable contract and the
+present FD-only boundary. Original schema-1 RG-K commands and artifacts remain
+supported. No measured elastic or double-pion dataset has been validated here.
 
 ## Commands
 
