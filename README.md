@@ -181,12 +181,39 @@ Use `--render-only` to redraw an existing bundle; changed configurations require
 a new analysis. Run all optional Python tests with `python -m unittest discover
 -s tests`.
 
+## Candidate exclusivity windows
+
+The reusable statistical engine, explicit cut table, and run-separated ROOT
+workflow are described in [docs/exclusivity_workflow.md](docs/exclusivity_workflow.md).
+Install `tools/requirements-cuts.txt`, then run:
+
+```bash
+python tools/exclusivity_cuts.py run \
+  --input /path/to/prepare_root_files \
+  --diagnostics-config CLAS12/JSON_configs/rgk_epip_diagnostics.json \
+  --binning-config CLAS12/JSON_configs/rgk_epip_binning.json \
+  --recipe CLAS12/JSON_configs/rgk_epip_cuts.json \
+  --output /path/to/exclusivity_output --workers 4
+```
+
+The stages `cache`, `derive`, `apply`, and `report` can be run separately. Model
+choices, fit ranges, quality gates and window policies are configured in JSON.
+Fits use only training runs. Every attempted fit and rejected/unsupported cell
+is saved; each role's candidate is applied independently and exported as ROOT
+friend masks. No input correction is applied. These are experimental candidate
+windows, with coverage and physics-validation limits made explicit in the report.
+
+Run all Python tests in the cuts environment with `python -m unittest discover
+-s tests`. `tests/test_peakfit.py` exercises the fitter on synthetic histograms
+without reading ROOT or knowing particle/sector/run identities.
+
 ## Design Philosophy
 
 - Each particle is represented by a single configurable object (e.g. `MomCorrParticle`)
 - Corrections are applied in a defined order (energy → momentum)
 - Dataset- and region-dependent behavior is handled via configuration rather than hard-coding
-- `ROOTDataFrame` is used throughout for scalable and transparent analysis
+- ROOTDataFrame supports C++ analysis; the optional Python workflow handles
+  diagnostics, reusable fitting, and cut application.
 
 ## Status
 
